@@ -1,7 +1,6 @@
 .git
 .venv
 .claude
-artifacts
 tests
 docs
 .pytest_cache
@@ -9,3 +8,10 @@ docs
 .ruff_cache
 .env
 *.md
+
+# Ship only the three precomputed product artifacts into the image; keep the
+# scratch logs and comparison copies out of the build context.
+artifacts/*
+!artifacts/model.joblib
+!artifacts/model_cards.json
+!artifacts/signal_report.json

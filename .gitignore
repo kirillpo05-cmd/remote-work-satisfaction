@@ -17,9 +17,13 @@ venv/
 .coverage
 htmlcov/
 
-# Generated artifacts
-artifacts/
-*.joblib
+# Artifacts: ship the precomputed product artifacts so the container starts in
+# seconds (the entrypoint regenerates them only when genuinely absent). All
+# scratch logs and comparison copies in this directory stay out of git.
+artifacts/*
+!artifacts/model.joblib
+!artifacts/model_cards.json
+!artifacts/signal_report.json
 *.pkl
 
 # OS / editor

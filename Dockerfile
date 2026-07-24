@@ -19,6 +19,9 @@ COPY --from=builder /app/.venv /app/.venv
 COPY src ./src
 COPY app ./app
 COPY data ./data
+# Precomputed artifacts baked into the image: the container serves in seconds
+# instead of retraining. .dockerignore admits only the three product files.
+COPY artifacts ./artifacts
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh && mkdir -p /app/artifacts && chown -R rwsat:rwsat /app
 ENV PATH="/app/.venv/bin:$PATH" \

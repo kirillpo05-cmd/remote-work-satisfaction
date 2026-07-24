@@ -1,0 +1,635 @@
+{
+  "selected": "dummy",
+  "cards": {
+    "dummy": {
+      "model_name": "dummy",
+      "trained_at": "2026-07-24T16:03:43.184525+00:00",
+      "n_train": 4000,
+      "n_test": 1000,
+      "metrics": {
+        "log_loss": 1.0985879986217628,
+        "balanced_accuracy": 0.3333333333333333,
+        "accuracy": 0.335,
+        "macro_f1": 0.16729088639200998,
+        "brier": 0.6666505
+      },
+      "baseline_metrics": {
+        "log_loss": 1.0985879986217628,
+        "balanced_accuracy": 0.3333333333333333,
+        "accuracy": 0.335,
+        "macro_f1": 0.16729088639200998,
+        "brier": 0.6666505
+      },
+      "lift_over_baseline": {
+        "log_loss": 0.0,
+        "balanced_accuracy": 0.0,
+        "accuracy": 0.0,
+        "macro_f1": 0.0,
+        "brier": 0.0
+      },
+      "cv_mean": 1.0985796102696122,
+      "cv_std": 1.0791619498022026e-05,
+      "permutation_test_p": 0.5373134328358209,
+      "is_better_than_baseline": false,
+      "cv_fold_logloss": [
+        1.0985884215900348,
+        1.0985884215900348,
+        1.0985884215900348,
+        1.0985663932889778,
+        1.0985663932889778
+      ],
+      "calibration": {
+        "Unsatisfied": [
+          [
+            0.33550000000000385,
+            0.335
+          ]
+        ],
+        "Neutral": [
+          [
+            0.32949999999999696,
+            0.33
+          ]
+        ],
+        "Satisfied": [
+          [
+            0.33499999999999713,
+            0.335
+          ]
+        ]
+      },
+      "proportional_odds_ok": null,
+      "feature_effects": [
+        {
+          "feature": "Age",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Gender",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Job_Role",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Industry",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Years_of_Experience",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Work_Location",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Hours_Worked_Per_Week",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Number_of_Virtual_Meetings",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Work_Life_Balance_Rating",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Stress_Level",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Mental_Health_Condition",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Access_to_Mental_Health_Resources",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Productivity_Change",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Social_Isolation_Rating",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Company_Support_for_Remote_Work",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Physical_Activity",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Sleep_Quality",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        },
+        {
+          "feature": "Region",
+          "importance_mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0
+        }
+      ],
+      "warnings": [
+        "permutation_test_p is computed on gradient_boosting for every card (D-007)."
+      ]
+    },
+    "ordinal_logit": {
+      "model_name": "ordinal_logit",
+      "trained_at": "2026-07-24T16:03:43.184525+00:00",
+      "n_train": 4000,
+      "n_test": 1000,
+      "metrics": {
+        "log_loss": 1.1007161896541788,
+        "balanced_accuracy": 0.33930348258706466,
+        "accuracy": 0.341,
+        "macro_f1": 0.2721395839699165,
+        "brier": 0.667933910954492
+      },
+      "baseline_metrics": {
+        "log_loss": 1.0985879986217628,
+        "balanced_accuracy": 0.3333333333333333,
+        "accuracy": 0.335,
+        "macro_f1": 0.16729088639200998,
+        "brier": 0.6666505
+      },
+      "lift_over_baseline": {
+        "log_loss": -0.002128191032416016,
+        "balanced_accuracy": 0.005970149253731349,
+        "accuracy": 0.006000000000000005,
+        "macro_f1": 0.10484869757790652,
+        "brier": -0.0012834109544919148
+      },
+      "cv_mean": 1.1045529413388118,
+      "cv_std": 0.0031902938307835373,
+      "permutation_test_p": 0.5373134328358209,
+      "is_better_than_baseline": false,
+      "cv_fold_logloss": [
+        1.1014850997898842,
+        1.1024012197771536,
+        1.105266243752952,
+        1.1104245190833126,
+        1.1031876242907566
+      ],
+      "calibration": {
+        "Unsatisfied": [
+          [
+            0.2812101464231388,
+            0.3402061855670103
+          ],
+          [
+            0.34267623354831145,
+            0.33508541392904073
+          ],
+          [
+            0.41606469808445445,
+            0.3111111111111111
+          ]
+        ],
+        "Neutral": [
+          [
+            0.3293572986270416,
+            0.33
+          ]
+        ],
+        "Satisfied": [
+          [
+            0.2825086562287986,
+            0.31666666666666665
+          ],
+          [
+            0.3432651407307673,
+            0.3386034255599473
+          ],
+          [
+            0.4130919325732387,
+            0.3442622950819672
+          ]
+        ]
+      },
+      "proportional_odds_ok": true,
+      "feature_effects": [
+        {
+          "feature": "Age",
+          "importance_mean": -0.00010255974598127882,
+          "ci_low": -0.00046220736803015416,
+          "ci_high": 0.00024414924852697546
+        },
+        {
+          "feature": "Gender",
+          "importance_mean": -0.0007477011878077737,
+          "ci_low": -0.0018926183810987706,
+          "ci_high": 0.00042683637332234774
+        },
+        {
+          "feature": "Job_Role",
+          "importance_mean": -0.00021630960852777974,
+          "ci_low": -0.0029445274804328512,
+          "ci_high": 0.0015426911073950778
+        },
+        {
+          "feature": "Industry",
+          "importance_mean": 0.0005086709510720322,
+          "ci_low": -0.00017318258270180298,
+          "ci_high": 0.0012630767351740403
+        },
+        {
+          "feature": "Years_of_Experience",
+          "importance_mean": 0.00138042344692307,
+          "ci_low": 0.0003970441259699642,
+          "ci_high": 0.002245084798916935
+        },
+        {
+          "feature": "Work_Location",
+          "importance_mean": 0.0013537172154434913,
+          "ci_low": -0.00015940658400522277,
+          "ci_high": 0.0027833253697348292
+        },
+        {
+          "feature": "Hours_Worked_Per_Week",
+          "importance_mean": -0.00036423716959828784,
+          "ci_low": -0.0007461456548739365,
+          "ci_high": 1.2247517027807945e-05
+        },
+        {
+          "feature": "Number_of_Virtual_Meetings",
+          "importance_mean": -0.0002854948561669864,
+          "ci_low": -0.0018158032523939104,
+          "ci_high": 0.0017169780465892293
+        },
+        {
+          "feature": "Work_Life_Balance_Rating",
+          "importance_mean": 0.0007957197986405929,
+          "ci_low": -0.00047478212324359446,
+          "ci_high": 0.0018926203391323724
+        },
+        {
+          "feature": "Stress_Level",
+          "importance_mean": -0.00019108155601707348,
+          "ci_low": -0.0012550058595162394,
+          "ci_high": 0.0009994452581791045
+        },
+        {
+          "feature": "Mental_Health_Condition",
+          "importance_mean": -4.213144630504928e-07,
+          "ci_low": -0.002076104944055801,
+          "ci_high": 0.0014545290103050662
+        },
+        {
+          "feature": "Access_to_Mental_Health_Resources",
+          "importance_mean": -0.00017495774704259965,
+          "ci_low": -0.0011212221784190624,
+          "ci_high": 0.0008916206423494275
+        },
+        {
+          "feature": "Productivity_Change",
+          "importance_mean": 4.274297537014693e-05,
+          "ci_low": -9.387203484710893e-05,
+          "ci_high": 0.0001660344279930779
+        },
+        {
+          "feature": "Social_Isolation_Rating",
+          "importance_mean": -4.296429190545995e-05,
+          "ci_low": -0.0002143675308349413,
+          "ci_high": 7.751901127680538e-05
+        },
+        {
+          "feature": "Company_Support_for_Remote_Work",
+          "importance_mean": 5.456005437522264e-05,
+          "ci_low": -0.0016205847935936656,
+          "ci_high": 0.001088642898805635
+        },
+        {
+          "feature": "Physical_Activity",
+          "importance_mean": -0.0008009246983745314,
+          "ci_low": -0.0015437543731571524,
+          "ci_high": -0.0001360586350631799
+        },
+        {
+          "feature": "Sleep_Quality",
+          "importance_mean": -0.00018894085780463143,
+          "ci_low": -0.0004744222823629851,
+          "ci_high": 0.0001397418233911096
+        },
+        {
+          "feature": "Region",
+          "importance_mean": 0.0003325889986142953,
+          "ci_low": -0.0020736906719603597,
+          "ci_high": 0.002378187746047798
+        }
+      ],
+      "warnings": [
+        "This model does not beat the prior baseline; its predictions must not drive decisions about people.",
+        "permutation_test_p is computed on gradient_boosting for every card (D-007)."
+      ]
+    },
+    "gradient_boosting": {
+      "model_name": "gradient_boosting",
+      "trained_at": "2026-07-24T16:03:43.184525+00:00",
+      "n_train": 4000,
+      "n_test": 1000,
+      "metrics": {
+        "log_loss": 1.2089398593105702,
+        "balanced_accuracy": 0.33199155736469166,
+        "accuracy": 0.332,
+        "macro_f1": 0.3320289435322911,
+        "brier": 0.7284980438608459
+      },
+      "baseline_metrics": {
+        "log_loss": 1.0985879986217628,
+        "balanced_accuracy": 0.3333333333333333,
+        "accuracy": 0.335,
+        "macro_f1": 0.16729088639200998,
+        "brier": 0.6666505
+      },
+      "lift_over_baseline": {
+        "log_loss": -0.11035186068880742,
+        "balanced_accuracy": -0.0013417759686416564,
+        "accuracy": -0.0030000000000000027,
+        "macro_f1": 0.16473805714028114,
+        "brier": -0.0618475438608459
+      },
+      "cv_mean": 1.2288990175293157,
+      "cv_std": 0.008565014025601211,
+      "permutation_test_p": 0.5373134328358209,
+      "is_better_than_baseline": false,
+      "cv_fold_logloss": [
+        1.2285799805685798,
+        1.2282228115912774,
+        1.2291910376402186,
+        1.2427766362859383,
+        1.2157246215605648
+      ],
+      "calibration": {
+        "Unsatisfied": [
+          [
+            0.07562415881954826,
+            0.3684210526315789
+          ],
+          [
+            0.1646215905283318,
+            0.36879432624113473
+          ],
+          [
+            0.2510257298012011,
+            0.3617886178861789
+          ],
+          [
+            0.34890395889490694,
+            0.30604982206405695
+          ],
+          [
+            0.44372183427375533,
+            0.31088082901554404
+          ],
+          [
+            0.5410731100373053,
+            0.3013698630136986
+          ],
+          [
+            0.6375945727332866,
+            0.42857142857142855
+          ],
+          [
+            0.7360771662705542,
+            0.36363636363636365
+          ],
+          [
+            0.8153496019922811,
+            0.0
+          ]
+        ],
+        "Neutral": [
+          [
+            0.07707024438990827,
+            0.3076923076923077
+          ],
+          [
+            0.15945660353228985,
+            0.36477987421383645
+          ],
+          [
+            0.2531404896373971,
+            0.308300395256917
+          ],
+          [
+            0.3500317933694144,
+            0.3382352941176471
+          ],
+          [
+            0.4435401585164599,
+            0.3411764705882353
+          ],
+          [
+            0.5490368985376743,
+            0.28205128205128205
+          ],
+          [
+            0.6404066687026526,
+            0.3611111111111111
+          ],
+          [
+            0.7468812210287139,
+            0.0
+          ],
+          [
+            0.8084443367311637,
+            1.0
+          ]
+        ],
+        "Satisfied": [
+          [
+            0.07393008556301608,
+            0.4444444444444444
+          ],
+          [
+            0.16011659615316615,
+            0.3493150684931507
+          ],
+          [
+            0.25346735974863555,
+            0.28771929824561404
+          ],
+          [
+            0.35121910433911063,
+            0.37174721189591076
+          ],
+          [
+            0.4449132013682207,
+            0.313953488372093
+          ],
+          [
+            0.5407716569054375,
+            0.35135135135135137
+          ],
+          [
+            0.6374393920988405,
+            0.45
+          ],
+          [
+            0.7474015965953992,
+            0.2
+          ],
+          [
+            0.8202203291607881,
+            0.0
+          ]
+        ]
+      },
+      "proportional_odds_ok": null,
+      "feature_effects": [
+        {
+          "feature": "Age",
+          "importance_mean": 0.004488561079984536,
+          "ci_low": -0.011117347893594209,
+          "ci_high": 0.0223986781640614
+        },
+        {
+          "feature": "Gender",
+          "importance_mean": 0.002761296577762999,
+          "ci_low": -0.00637189277114279,
+          "ci_high": 0.011022130847372965
+        },
+        {
+          "feature": "Job_Role",
+          "importance_mean": -0.002453743805691455,
+          "ci_low": -0.011961075732568133,
+          "ci_high": 0.007611337640199016
+        },
+        {
+          "feature": "Industry",
+          "importance_mean": -0.0036646095574857985,
+          "ci_low": -0.015050018621580142,
+          "ci_high": 0.007973267920191943
+        },
+        {
+          "feature": "Years_of_Experience",
+          "importance_mean": 0.016470255768987575,
+          "ci_low": -0.0018247231401352312,
+          "ci_high": 0.033607311260514326
+        },
+        {
+          "feature": "Work_Location",
+          "importance_mean": 0.0037960489010597934,
+          "ci_low": -0.002756097598197987,
+          "ci_high": 0.011394277219129464
+        },
+        {
+          "feature": "Hours_Worked_Per_Week",
+          "importance_mean": -0.010561142829596408,
+          "ci_low": -0.023444414503113825,
+          "ci_high": 0.003608291369578842
+        },
+        {
+          "feature": "Number_of_Virtual_Meetings",
+          "importance_mean": -0.00646440024037438,
+          "ci_low": -0.016953248766363664,
+          "ci_high": 0.004320305888102305
+        },
+        {
+          "feature": "Work_Life_Balance_Rating",
+          "importance_mean": -0.01402707085056909,
+          "ci_low": -0.02126636743143314,
+          "ci_high": -0.00485015613786955
+        },
+        {
+          "feature": "Stress_Level",
+          "importance_mean": -0.002023541755633625,
+          "ci_low": -0.00948288854860142,
+          "ci_high": 0.0061928409258439916
+        },
+        {
+          "feature": "Mental_Health_Condition",
+          "importance_mean": -0.0034091990429547803,
+          "ci_low": -0.014336248059976114,
+          "ci_high": 0.004908630966718725
+        },
+        {
+          "feature": "Access_to_Mental_Health_Resources",
+          "importance_mean": 0.002123873288344839,
+          "ci_low": -0.0030421120687387005,
+          "ci_high": 0.0081518041458565
+        },
+        {
+          "feature": "Productivity_Change",
+          "importance_mean": 0.0036545721096069204,
+          "ci_low": -0.0013802430979458268,
+          "ci_high": 0.009034134482891101
+        },
+        {
+          "feature": "Social_Isolation_Rating",
+          "importance_mean": -0.002269537643934864,
+          "ci_low": -0.008280091217582292,
+          "ci_high": 0.00432222964916714
+        },
+        {
+          "feature": "Company_Support_for_Remote_Work",
+          "importance_mean": -0.0015518715367788779,
+          "ci_low": -0.011650445586700081,
+          "ci_high": 0.009656598317684721
+        },
+        {
+          "feature": "Physical_Activity",
+          "importance_mean": -0.0024168215080860866,
+          "ci_low": -0.00816297973738051,
+          "ci_high": 0.003631105077410323
+        },
+        {
+          "feature": "Sleep_Quality",
+          "importance_mean": 0.0032495577246269614,
+          "ci_low": -0.0036438127414819667,
+          "ci_high": 0.007965456664633318
+        },
+        {
+          "feature": "Region",
+          "importance_mean": -0.006231964616678558,
+          "ci_low": -0.013921621058258815,
+          "ci_high": 0.002010418023776195
+        }
+      ],
+      "warnings": [
+        "This model does not beat the prior baseline; its predictions must not drive decisions about people.",
+        "permutation_test_p is computed on gradient_boosting for every card (D-007)."
+      ]
+    }
+  }
+}

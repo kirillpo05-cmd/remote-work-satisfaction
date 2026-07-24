@@ -278,6 +278,33 @@ Status: accepted
 
 ---
 
+## D-013: Ship the precomputed artifacts in git and in the image
+Context: SPEC M7 lets the API train on first start if the model artefact is
+absent, so the reviewer never trains by hand. But the artifacts were gitignored
+and .dockerignore excluded the whole artifacts directory, so a fresh clone had
+nothing to bake in and the container regenerated everything on first start —
+a measured 62-minute cold `docker compose up`. That defeats the one-command
+deployability the packaging exists to provide.
+Options: (a) keep regenerating on first start and document the hour-long wait;
+(b) commit the three product artifacts (model.joblib, model_cards.json,
+signal_report.json), admit them through .dockerignore, COPY them into the
+image, and let the entrypoint regenerate only when they are genuinely absent.
+Decision: (b).
+Rationale: the artifacts are seed-deterministic and reproducible from the CLI
+(verified in Phase 2), so committing them caches a reproducible build output
+rather than hiding a manual step. Cold start drops from an hour to the build
+time. The first-start regeneration path is retained unchanged as the fallback
+SPEC M7 requires, so deleting the artifacts still works.
+Cost: git now carries ~1.2 MB of generated output (the signal report's null
+draws dominate), and a committed artifact can drift from the code that
+produced it — a reviewer who changes stats.py or model.py and does not
+regenerate would see stale numbers. Mitigation: the artifacts are reproducible
+with `uv run python -m rwsat.cli verify-signal` / `train`, and the entrypoint
+regenerates on a clean volume with no artifacts present.
+Status: accepted
+
+---
+
 <!-- Decisions that must be recorded as the build proceeds:
 
 - Ordinal versus multinomial target treatment
