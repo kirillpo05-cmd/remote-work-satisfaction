@@ -96,6 +96,7 @@ literal thresholds appear in function signatures or module code.
 | `RAW_PATH` | `data/raw/Impact_of_Remote_Work_on_Mental_Health.csv` | `load_raw` |
 | `TEST_SIZE` | 0.2 | train/test split |
 | `N_SPLITS` | 5 | stratified CV folds (univariate OOF statistic and model CV) |
+| `N_UNIVARIATE_BINS` | 5 | quantile bins for numeric features in the univariate screen (M3) |
 | `N_BOOT` | 2000 | bootstrap resamples for confidence intervals |
 | `N_PERM` | 500 | per-feature permutation null |
 | `N_PERM_MODEL` | 200 | model-level permutation test |
@@ -123,7 +124,8 @@ unnecessary at this sample size.
 ### Data model
 `ColumnSpec` (dataclass): `name: str`, `dtype: Literal["int","float","cat","ord","bin"]`,
 `role: Literal["feature","target","identifier","dropped"]`,
-`categories: list[str] | None`, `order: list[str] | None`.
+`categories: list[str] | None`, `order: list[str] | list[int] | None` — integer
+orders cover the 1–5 rating columns, which the CSV stores as integers.
 
 `SCHEMA: dict[str, ColumnSpec]` — the single source of truth for columns.
 
@@ -279,15 +281,27 @@ carries information about the target.
 Computation for a feature X:
 1. Baseline: the prior — training-fold class frequencies predicted for every
    row (equivalent to `DummyClassifier(strategy="prior")`).
-2. Univariate model: a `Pipeline` of the per-type encoder (numeric ->
-   `StandardScaler`; categorical -> one-hot; ordinal -> integer codes in SCHEMA
-   order) and multinomial `LogisticRegression` with default regularisation,
-   seeded from config.
+2. Univariate model: a `Pipeline` of a **form-agnostic one-hot encoding** and
+   multinomial `LogisticRegression` with default regularisation, seeded from
+   config. Every feature is encoded as one-hot over its levels: categorical
+   and ordinal features natively, numeric features after quantile binning into
+   `N_UNIVARIATE_BINS` bins (the binner is fitted inside the CV fold like
+   every other transformer). A single-column encoding — ordinal codes or a
+   scaled numeric — only detects monotone log-odds trends, so a non-monotone
+   association would be misreported as noise (D-006). Ordinal encoding remains
+   in M4's model layer, where interpretability matters; this choice affects
+   the screening statistic only.
 3. Stratified `N_SPLITS`-fold CV on the **training split only** — the held-out
    test set never enters univariate screening. Collect out-of-fold predicted
    probabilities for both models.
 4. `delta_logloss` = mean over rows of (per-row baseline log loss − per-row
    model log loss).
+
+`delta_logloss` may be **negative** for a useless feature, and that is
+expected: out-of-fold log loss penalises degrees of freedom that do not help,
+so a feature carrying no information tends to land slightly below zero rather
+than at zero. A negative value is not an error and needs no special handling —
+it simply feeds the `noise` verdict.
 
 Uncertainty and significance:
 - CI: bootstrap over the per-row out-of-fold loss differences, `N_BOOT`
@@ -361,6 +375,13 @@ permutation_null(df, feature, target, n_perm=N_PERM) -> np.ndarray  # null delta
   Gate 3; the dataset verdict does not move. The univariate and model-level
   conclusions therefore cannot disagree about the product's headline verdict,
   because only one of them defines it.
+- **Known limitation — interactions.** The univariate screen cannot detect
+  interaction effects by construction: each feature is screened alone. The
+  model-level permutation test in the ModelCard is the safeguard for that
+  case — a multivariate model can beat its permutation null even when no
+  single feature earns `signal`. Under the precedence rule such a
+  disagreement is a Gate 3 finding to investigate and document, not a
+  contradiction in the product. This limitation goes into the README.
 
 ### Edge cases
 | Situation | Behaviour |

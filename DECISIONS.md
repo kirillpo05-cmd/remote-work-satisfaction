@@ -117,6 +117,29 @@ Status: accepted
 
 ---
 
+## D-006: Form-agnostic encoding in the univariate screen
+Context: the common statistic (D-002) fits one univariate model per feature.
+The first design encoded features by type — numeric scaled, ordinal as integer
+codes, categorical one-hot — which spends the fewest degrees of freedom.
+Options: (a) keep per-type encoding; (b) encode every feature as one-hot over
+its levels: categorical and ordinal natively, numeric after quantile binning
+into `N_UNIVARIATE_BINS` (5) bins.
+Decision: (b).
+Rationale: a single-column encoding only detects monotone log-odds trends, so
+a non-monotone association — satisfaction peaking at mid-range hours, say —
+would be misreported as noise by the very screen whose job is to catch it.
+Ordinal encoding remains in `model.py`, where interpretability matters; this
+change affects the screening statistic only.
+Cost: more degrees of freedom per feature, so somewhat less power against
+genuinely monotone effects, and `delta_logloss` for useless features tends to
+land slightly below zero rather than at zero (expected: out-of-fold log loss
+penalises unhelpful degrees of freedom). Quantile binning discards within-bin
+variation for numeric features, and `N_UNIVARIATE_BINS` is one more judgement
+constant to sanity-check against the Phase 1 synthetic tests.
+Status: accepted
+
+---
+
 <!-- Decisions that must be recorded as the build proceeds:
 
 - Ordinal versus multinomial target treatment

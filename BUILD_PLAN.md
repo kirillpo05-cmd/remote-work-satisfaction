@@ -38,7 +38,11 @@ Agent: `data-scientist`
 - Native effect sizes (Cramer's V, eta squared, rho) as descriptive columns only
 - The three-level verdict on the common statistic, with plain-English explanations
 - Synthetic tests with known answers: random target -> `noise`, injected
-  association -> `signal`
+  association -> `signal` — including a **non-monotone** fixture asserting
+  both directions: a U-shaped association on a numeric feature yields
+  `signal`, and a pure-noise feature with the same number of levels yields
+  `noise`. The first is the case the form-agnostic encoding (D-006) exists to
+  catch; without the second, an over-eager screen would pass
 - Cache the `SignalReport` to `artifacts/`
 
 **GATE 2.** Rerun the permutation test with a different seed. If the verdict
@@ -65,8 +69,10 @@ converge. Hyperparameter tuning is out of scope.
 **GATE 3.** Do the permutation importances from the model and the per-feature
 `delta_logloss` values from `stats.py` tell the same story? If not, find out
 why before proceeding — that discrepancy is either a bug or a finding, and both
-belong in the docs. Per the precedence rule in SPEC M3, the discrepancy is
-investigated and recorded but never changes `dataset_verdict`.
+belong in the docs. An interaction effect is one legitimate cause: the
+univariate screen cannot see interactions by construction, while the model
+can. Per the precedence rule in SPEC M3, the discrepancy is investigated and
+recorded but never changes `dataset_verdict`.
 
 ---
 
@@ -99,6 +105,10 @@ Human-led. This is not leftover time.
 - Limitations must include the onsite-rows caveat (D-004): onsite respondents
   stay in the sample, the target is read as satisfaction with the current work
   arrangement, and conclusions about remote work specifically are weaker for it
+- Limitations must also include: the univariate screen cannot detect
+  interaction effects by construction; the model-level permutation test in the
+  ModelCard is the safeguard for that case, and a disagreement between the two
+  is a Gate 3 finding, not a contradiction
 - DECISIONS.md: at least eight entries, each with a cost
 - docs/ai-collaboration.md: at least five concrete episodes
 - Re-run the README instructions literally, as written
