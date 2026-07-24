@@ -354,9 +354,17 @@ class SignalReport:
 ### Public interface
 ```python
 effect_for(df, feature, target, n_boot=N_BOOT, n_perm=N_PERM, seed=SEED) -> EffectResult
-signal_report(df, target, features=None) -> SignalReport   # df is the training split
-permutation_null(df, feature, target, n_perm=N_PERM) -> np.ndarray  # null deltas
+signal_report(df, target, features=None,
+              n_boot=N_BOOT, n_perm=N_PERM, seed=SEED) -> SignalReport  # df: training split
+permutation_null(df, feature, target, n_perm=N_PERM, seed=SEED) -> np.ndarray  # null deltas
 ```
+
+The `n_boot`/`n_perm`/`seed` overrides exist for the synthetic known-answer
+tests; production callers use the config defaults. Because BH is always
+applied across the full family, `effect_for` computes the whole family
+internally and returns the requested feature's row — a single feature costs
+the same as the full report by design, and cached `SignalReport`s are the way
+to serve per-feature queries cheaply (M5).
 
 ### Business logic
 - Native test selection stays by variable type: categorical -> chi-square with

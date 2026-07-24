@@ -105,6 +105,28 @@ What it says: the useful failure mode — the assistant followed the intent of
 the diagnostic rather than its letter, and surfaced the conflict instead of
 silently picking either.
 
+## Episode 4: a green suite on the first run, treated as a warning
+Task: assess whether the 13 M1 edge-case tests actually test anything.
+What the assistant proposed: nothing — the suite was green on its first run
+and was reported as a success.
+Why it did not fit: the tests were written before the implementation, and
+under TDD a first-run green suite is a weak warning sign rather than a good
+one: a test written first should be seen failing first, and none of these ever
+were.
+What was done instead: the assistant was asked to name a concrete failing
+mutation of src/rwsat/data.py for every test, and to apply two of them for
+real, one at a time, running the suite each time. All 13 tests had such a
+mutation — the empty-file test only after being strengthened, because pandas'
+EmptyDataError is already a ValueError and the original assertion could not
+distinguish the module's handling from pandas' default. Both applied mutations
+failed exactly the predicted tests and no others. The exercise surfaced a real
+defect: the split test read the real CSV through load_raw, violating the rule
+that tests do not depend on external files and doubling the failure surface of
+any loading regression. The test was rewritten on a synthetic fixture.
+What it says: a green suite proves the tests pass, not that they test. The
+mutation check bought the missing half of TDD after the fact, and it was the
+human who did not trust the green.
+
 ---
 
 ## Where the tooling helped most

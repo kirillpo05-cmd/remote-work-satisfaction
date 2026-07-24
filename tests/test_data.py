@@ -147,7 +147,10 @@ def test_prepare_drops_identifier_and_orders_categories() -> None:
 
 
 def test_split_is_stratified_seeded_and_sized() -> None:
-    df = prepare(load_raw(RAW_PATH))
+    # Synthetic fixture: the split contract must be testable without the real
+    # CSV (tests do not depend on external files). 1500 rows with a perfectly
+    # balanced target make the 1-percentage-point stratification bound sharp.
+    df = prepare(synthetic_frame(1500))
     train_a, test_a = split(df, test_size=TEST_SIZE, seed=SEED)
     train_b, test_b = split(df, test_size=TEST_SIZE, seed=SEED)
     assert len(test_a) == round(len(df) * TEST_SIZE)
