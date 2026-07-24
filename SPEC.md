@@ -100,6 +100,7 @@ literal thresholds appear in function signatures or module code.
 | `N_BOOT` | 2000 | bootstrap resamples for confidence intervals |
 | `N_PERM` | 2000 | per-feature permutation null (raised from 500, D-010) |
 | `N_PERM_MODEL` | 200 | model-level permutation test |
+| `N_IMPORTANCE_REPEATS` | 30 | column shuffles per feature for permutation importance |
 | `ALPHA` | 0.05 | significance level applied to BH-adjusted p-values |
 | `NOISE_PERMUTATION_P` | 0.2 | lower bound for the `noise` verdict |
 | `DELTA_NEGLIGIBLE` | 0.01 | negligible out-of-fold log-loss improvement, nats per observation |
@@ -125,7 +126,10 @@ unnecessary at this sample size.
 `ColumnSpec` (dataclass): `name: str`, `dtype: Literal["int","float","cat","ord","bin"]`,
 `role: Literal["feature","target","identifier","dropped"]`,
 `categories: list[str] | None`, `order: list[str] | list[int] | None` — integer
-orders cover the 1–5 rating columns, which the CSV stores as integers.
+orders cover the 1–5 rating columns, which the CSV stores as integers —
+plus `minimum: int | None`, `maximum: int | None` for numeric columns: the
+verified CSV ranges from the table below, consumed by M2's `feature_metadata`
+to build the prediction form.
 
 `SCHEMA: dict[str, ColumnSpec]` — the single source of truth for columns.
 
@@ -367,6 +371,12 @@ the same as the full report by design, and cached `SignalReport`s are the way
 to serve per-feature queries cheaply (M5).
 
 ### Business logic
+- **Prepared frames only.** Feature typing follows dtypes: numeric ->
+  numeric, ordered categorical -> ordinal, unordered categorical ->
+  categorical. Those dtypes are assigned by `prepare()` from SCHEMA, so an
+  object-dtype (untyped) feature column raises `ValueError` naming
+  `prepare()` — silent inference on raw strings would misclassify ordinals
+  as nominal (D-011).
 - Native test selection stays by variable type: categorical -> chi-square with
   Cramer's V; numeric -> Kruskal-Wallis with eta-squared; ordinal -> Spearman
   against the ordered target. Descriptive columns only.
@@ -432,6 +442,7 @@ class ModelCard:
     cv_std: float
     permutation_test_p: float          # model log loss against N_PERM_MODEL permuted targets
     is_better_than_baseline: bool
+    cv_fold_logloss: list[float]       # per-fold values; the paired rule (D-009) needs them
     calibration: dict[str, list[tuple[float, float]]]  # one-vs-rest curve per class
     proportional_odds_ok: bool | None
     feature_effects: list[dict]        # permutation importance with CIs
@@ -450,12 +461,20 @@ class Prediction:
 
 ### Public interface
 ```python
-train_all(df) -> dict[str, ModelCard]   # dummy, ordinal_logit, gradient_boosting
-                                        # + multinomial, only when fitted (diagnostic)
-select_model(cards) -> str
-save(model, path) / load(path)
+train_all(df, n_perm_model=N_PERM_MODEL, seed=SEED) -> TrainResult
+select_model(cards) -> str              # the paired-rule selection, exposed for tests
+save(model, path) / load(path)          # model is a TrainedModel (joblib)
 predict_one(model, payload: dict) -> Prediction
 ```
+
+`TrainResult` (dataclass): `cards: dict[str, ModelCard]` — dummy,
+ordinal_logit, gradient_boosting, plus multinomial only when fitted
+(diagnostic) — `selected: str`, and `model: TrainedModel`, the fitted selected
+artifact that `save`/`load`/`predict_one` operate on. `TrainedModel` bundles
+the fitted pipeline with the train priors, per-feature fill values and numeric
+ranges that `predict_one` needs for imputation flags and `out_of_range`
+detection. The `n_perm_model`/`seed` overrides exist for tests; production
+callers use the config defaults.
 
 ### Business logic
 - Three primary models, in this order, plus a diagnostic multinomial model

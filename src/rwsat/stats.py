@@ -94,14 +94,18 @@ def _encode(series: pd.Series) -> _Encoded:
             n_merged=0,
             mask=~np.isnan(values),
         )
-    if isinstance(series.dtype, pd.CategoricalDtype):
-        categorical = series.cat
-        kind: Literal["ordinal", "categorical"] = (
-            "ordinal" if series.dtype.ordered else "categorical"
+    if not isinstance(series.dtype, pd.CategoricalDtype):
+        # Typing follows dtypes, and dtypes come from prepare() (D-011).
+        # Guessing on raw strings would silently treat ordinals as nominal.
+        raise ValueError(
+            f"Feature {series.name!r} has dtype {series.dtype}, which carries no "
+            f"type information. Run rwsat.data.prepare() on the frame first — it "
+            f"assigns numeric/ordinal/categorical dtypes from SCHEMA."
         )
-    else:
-        categorical = pd.Categorical(series)  # type: ignore[assignment]
-        kind = "categorical"
+    categorical = series.cat
+    kind: Literal["ordinal", "categorical"] = (
+        "ordinal" if series.dtype.ordered else "categorical"
+    )
     codes = np.asarray(categorical.codes, dtype=np.int64)
     n_levels = len(categorical.categories)
     mask = codes >= 0  # pandas encodes missing as -1

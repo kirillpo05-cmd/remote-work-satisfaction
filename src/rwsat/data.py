@@ -32,6 +32,8 @@ class ColumnSpec:
     role: Literal["feature", "target", "identifier", "dropped"]
     categories: list[str] | None = None
     order: list[str] | list[int] | None = None
+    minimum: int | None = None  # verified CSV range, for the prediction form (M2)
+    maximum: int | None = None
 
 
 def _feature(
@@ -39,15 +41,25 @@ def _feature(
     dtype: Literal["int", "float", "cat", "ord", "bin"],
     categories: list[str] | None = None,
     order: list[str] | list[int] | None = None,
+    minimum: int | None = None,
+    maximum: int | None = None,
 ) -> ColumnSpec:
-    return ColumnSpec(name=name, dtype=dtype, role="feature", categories=categories, order=order)
+    return ColumnSpec(
+        name=name,
+        dtype=dtype,
+        role="feature",
+        categories=categories,
+        order=order,
+        minimum=minimum,
+        maximum=maximum,
+    )
 
 
 SCHEMA: dict[str, ColumnSpec] = {
     spec.name: spec
     for spec in [
         ColumnSpec(name="Employee_ID", dtype="cat", role="identifier"),
-        _feature("Age", "int"),
+        _feature("Age", "int", minimum=22, maximum=60),
         _feature("Gender", "cat", categories=["Female", "Male", "Non-binary", "Prefer not to say"]),
         _feature(
             "Job_Role",
@@ -75,10 +87,10 @@ SCHEMA: dict[str, ColumnSpec] = {
                 "Retail",
             ],
         ),
-        _feature("Years_of_Experience", "int"),
+        _feature("Years_of_Experience", "int", minimum=1, maximum=35),
         _feature("Work_Location", "cat", categories=["Hybrid", "Onsite", "Remote"]),
-        _feature("Hours_Worked_Per_Week", "int"),
-        _feature("Number_of_Virtual_Meetings", "int"),
+        _feature("Hours_Worked_Per_Week", "int", minimum=20, maximum=60),
+        _feature("Number_of_Virtual_Meetings", "int", minimum=0, maximum=15),
         _feature("Work_Life_Balance_Rating", "ord", order=RATING_ORDER),
         _feature("Stress_Level", "ord", order=["Low", "Medium", "High"]),
         _feature(

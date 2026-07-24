@@ -159,6 +159,19 @@ def test_rare_categories_are_merged() -> None:
     assert "merged" in effect.explanation
 
 
+def test_object_dtype_feature_is_rejected_with_prepare_hint() -> None:
+    rng = np.random.default_rng(10)
+    n = 120
+    df = pd.DataFrame(
+        {
+            "untyped": rng.choice(["Low", "Medium", "High"], size=n),  # object dtype
+            TARGET: make_target(rng.integers(0, 3, size=n)),
+        }
+    )
+    with pytest.raises(ValueError, match="prepare"):
+        signal_report(df, TARGET, n_boot=10, n_perm=5, seed=1)
+
+
 def test_nan_rows_are_excluded_and_n_reflects_it() -> None:
     df = u_and_noise_frame(n=400, seed=8)
     df.loc[df.index[:25], "noise_feature"] = np.nan

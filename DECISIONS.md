@@ -238,6 +238,27 @@ Status: accepted
 
 ---
 
+## D-011: stats.py rejects unprepared frames instead of guessing types
+Context: `stats.py` infers feature typing from dtypes (numeric / ordered
+categorical / unordered categorical) while SCHEMA is the declared single
+source of truth. The inference is correct exactly when the frame has been
+through `prepare()`, which assigns dtypes from SCHEMA. On a raw frame every
+string column is object dtype and an ordinal would silently be treated as
+nominal — the native effect would be mislabelled (chi-square instead of
+Spearman) with no error.
+Options: (a) document the implicit dependency on `prepare()` as a known
+constraint; (b) add a guard: an object-dtype feature column raises
+`ValueError` telling the caller to run `prepare()`.
+Decision: (b).
+Rationale: a documented constraint fails silently when forgotten; a guard
+fails loudly at the entry point, and the failure message contains the fix.
+Cost: `signal_report` can no longer screen ad-hoc frames with raw string
+columns — synthetic tests and callers must build properly typed columns,
+which is a small amount of ceremony per call site.
+Status: accepted
+
+---
+
 <!-- Decisions that must be recorded as the build proceeds:
 
 - Ordinal versus multinomial target treatment
