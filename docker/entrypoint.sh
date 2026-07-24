@@ -4,12 +4,12 @@
 set -e
 
 if [ ! -f artifacts/signal_report.json ]; then
-    echo "First start: no signal report found - running verify-signal (~15-20 min)..."
+    echo "First start: no signal report found - running verify-signal (~25-35 min in-container)..."
     python -m rwsat.cli verify-signal
 fi
 
 if [ ! -f artifacts/model.joblib ]; then
-    echo "First start: no model artefact found - training (~15-20 min)..."
+    echo "First start: no model artefact found - training (~20-30 min in-container)..."
     python -m rwsat.cli train
 fi
 
