@@ -53,6 +53,7 @@ class EffectResult:
     permutation_p_adj: float
     null_mean: float
     null_p95: float
+    null_deltas: list[float]  # raw null draws; Screen 2's histogram source
     verdict: Verdict
     explanation: str
     n: int
@@ -235,6 +236,7 @@ class _RawEffect:
     perm_p: float
     null_mean: float
     null_p95: float
+    null_deltas: list[float]
     n: int
     n_merged: int
     constant: bool
@@ -291,6 +293,7 @@ def _screen_one(
             perm_p=1.0,
             null_mean=0.0,
             null_p95=0.0,
+            null_deltas=[],  # no test was run; Screen 2 shows the explanation instead
             n=n,
             n_merged=0,
             constant=True,
@@ -316,6 +319,7 @@ def _screen_one(
         perm_p=perm_p,
         null_mean=float(null.mean()),
         null_p95=float(np.percentile(null, 95)),
+        null_deltas=[float(v) for v in null],
         n=n,
         n_merged=encoded.n_merged,
         constant=False,
@@ -366,6 +370,7 @@ def signal_report(
                 permutation_p_adj=float(p_adj),
                 null_mean=r.null_mean,
                 null_p95=r.null_p95,
+                null_deltas=r.null_deltas,
                 verdict=verdict,
                 explanation=explanation,
                 n=r.n,

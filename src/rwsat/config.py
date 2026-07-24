@@ -7,6 +7,9 @@ SEED = 42
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_PATH = PROJECT_ROOT / "data" / "raw" / "Impact_of_Remote_Work_on_Mental_Health.csv"
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+MODEL_PATH = ARTIFACTS_DIR / "model.joblib"
+SIGNAL_REPORT_PATH = ARTIFACTS_DIR / "signal_report.json"
+MODEL_CARDS_PATH = ARTIFACTS_DIR / "model_cards.json"
 
 TEST_SIZE = 0.2
 N_SPLITS = 5

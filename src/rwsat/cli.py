@@ -11,14 +11,10 @@ import sys
 from dataclasses import asdict
 from typing import Any
 
-from rwsat.config import ARTIFACTS_DIR
+from rwsat.config import ARTIFACTS_DIR, MODEL_CARDS_PATH, MODEL_PATH, SIGNAL_REPORT_PATH
 from rwsat.data import TARGET, load_raw, prepare, split, validate
 from rwsat.model import ModelCard, save, train_all
 from rwsat.stats import signal_report
-
-MODEL_PATH = ARTIFACTS_DIR / "model.joblib"
-SIGNAL_REPORT_PATH = ARTIFACTS_DIR / "signal_report.json"
-MODEL_CARDS_PATH = ARTIFACTS_DIR / "model_cards.json"
 
 
 def _cmd_validate() -> int:

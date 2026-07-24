@@ -100,6 +100,7 @@ def test_permutation_p_never_zero_and_bh_never_shrinks(
         assert e.permutation_p >= 1 / 201  # add-one floor at n_perm=200
         assert e.permutation_p_adj >= e.permutation_p
         assert e.permutation_p_adj <= 1.0
+        assert len(e.null_deltas) == 200  # the raw draws ship with the result
 
 
 def test_effects_sorted_by_delta_descending(u_and_noise_report: SignalReport) -> None:

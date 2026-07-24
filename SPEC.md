@@ -338,6 +338,8 @@ class EffectResult:
     permutation_p_adj: float     # Benjamini-Hochberg across all features
     null_mean: float             # of the permutation null of delta_logloss
     null_p95: float
+    null_deltas: list[float]     # the raw null draws — Screen 2's histogram is
+                                 # built from these, never from a re-simulation
     verdict: Literal["signal", "inconclusive", "noise"]
     explanation: str             # one plain-English sentence, no jargon
     n: int
@@ -546,6 +548,7 @@ POST /predict        body {"features": {...}}
                         and flagged as "imputed:<field>".
 GET  /model-card     -> 200 ModelCard for the selected model | 503
 GET  /model-card/all -> 200 all cards (three primary; diagnostic multinomial when fitted)
+GET  /validation     -> 200 ValidationReport (computed once at startup; Screen 4 shows it)
 ```
 
 ### Business logic
@@ -589,7 +592,13 @@ above the fold, stating plainly that this must not drive decisions about people.
 **Screen 4 — Model Card.** All primary models next to baseline (plus the
 diagnostic multinomial model when it was fitted), per-class one-vs-rest
 calibration curves with the multiclass Brier score, model permutation test,
-data validation report, selection rationale.
+data validation report, selection rationale. Permutation importances must not
+be presented in any way that reads as a driver claim: if they appear, they
+appear behind the model's beats-baseline status and are preceded by the
+sentence that **permutation importance describes the fitted model, not the
+data, and can be positive for a model that loses to the baseline** — the
+Phase 2 run showed Years_of_Experience ranked first by both models while the
+factor screen calls it noise. Factor evidence lives on Screen 2 only.
 
 **Screen 5 — Methodology.** Static markdown: which tests, why the BH correction,
 how to read a verdict, known dataset limitations. Written by hand.
