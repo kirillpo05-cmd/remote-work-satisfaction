@@ -1,0 +1,41 @@
+# One-command startup: `docker compose up` serves the API on :8000 and the UI
+# on :8501. No environment variable is required. On a cold start the API
+# produces the missing artifacts first (signal report + model, ~30-40 min);
+# the UI waits on the API healthcheck and appears when the API is ready.
+# Artifacts persist in ./artifacts, so every later start is fast.
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 75m
+
+  ui:
+    build: .
+    command:
+      - streamlit
+      - run
+      - app/main.py
+      - --server.port=8501
+      - --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      RWSAT_API_URL: http://api:8000
+      STREAMLIT_SERVER_HEADLESS: "true"
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+    depends_on:
+      api:
+        condition: service_healthy

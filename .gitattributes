@@ -1,0 +1,4 @@
+# Shell scripts and Makefiles must keep LF endings even on Windows checkouts;
+# CRLF breaks /bin/sh inside the container and GNU make.
+*.sh text eol=lf
+Makefile text eol=lf
