@@ -21,7 +21,10 @@ These rules are not negotiable and are not relaxed to improve a result.
 - No number becomes a claim without a confidence interval.
 - Multiple comparisons are corrected with Benjamini-Hochberg across the full family.
 - Tree `feature_importances_` are never used as evidence of influence.
-- A small p-value with Cramer's V < 0.1 is reported as a negligible effect.
+- Ranking and verdicts run on the common statistic (`delta_logloss`, SPEC M3);
+  native effect sizes are descriptive only.
+- A small permutation p with `delta_logloss` below `DELTA_NEGLIGIBLE` is
+  reported as a negligible effect.
 
 ## Baseline
 - `DummyClassifier(strategy="prior")` is trained first in every experiment.

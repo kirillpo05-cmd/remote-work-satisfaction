@@ -32,6 +32,9 @@ data/raw/*.csv  ->  src/rwsat/data.py      schema, validation, split
 ## Rules
 1. No code without a matching section in `SPEC.md`. If the spec is thin, extend
    the spec first — never guess in code.
+   **Exception:** `scripts/spike_signal_check.py`, the Phase 0 spike, may exist
+   without a spec section. It must be deleted or absorbed into spec'd modules
+   before Phase 2 ends.
 2. Train/test split happens **before** any preprocessing. All preprocessing lives
    inside `sklearn.Pipeline`. Fitting on test data is a critical bug.
 3. Tree-based `feature_importances_` are never used as evidence of influence.
@@ -54,6 +57,7 @@ hyperparameter tuning. This is a scoped evaluation project, not a SaaS.
 uv sync
 uv run pytest -q
 uv run ruff check src tests && uv run mypy src
+uv run python -m rwsat.cli validate
 uv run python -m rwsat.cli verify-signal
 uv run python -m rwsat.cli train
 docker compose up            # API on :8000, UI on :8501
@@ -67,8 +71,10 @@ docker compose up            # API on :8000, UI on :8501
 - `README.md` — written last, by hand, from the two logs above
 
 ## The Phase 0 gate
-The first task in this project is the `verify-signal` skill. Its outcome decides
-the product framing. Do not build the model, API or UI layers before it completes.
+The first task in this project is the `verify-signal` skill, executed as the
+explicit spike `scripts/spike_signal_check.py` (see the Rule 1 exception). Its
+outcome decides the product framing. Do not build the model, API or UI layers
+before it completes.
 - Signal found: emphasise driver explanation and prediction quality.
 - No signal found: emphasise proving its absence and protecting the user from a
   false conclusion. This is a valid result, not a failure, and the product is

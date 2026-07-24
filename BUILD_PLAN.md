@@ -11,10 +11,15 @@ Rough wall-clock estimates assume an uninterrupted session with an AI assistant.
 ## Phase 0 — Scaffold and the signal gate  (~2h)
 
 - Repo init, `uv init`, directory structure, ruff/mypy/pytest config
-- `src/rwsat/config.py`: seed, paths, thresholds
-- M1 data layer: schema, validation, split, with edge-case tests
-- Reconcile the expected schema in SPEC.md against the actual CSV
-- Run the `verify-signal` skill in full
+- `src/rwsat/config.py`: every named constant from the SPEC Configuration table
+- M1 data layer: schema, validation, split, with edge-case tests —
+  `keep_default_na=False` and the `"None"`-survival assertion from day one
+- Schema in SPEC.md already reconciled against the CSV (2026-07-24); spot-check
+  it, don't redo it
+- Run the `verify-signal` protocol via `scripts/spike_signal_check.py` — an
+  explicit spike, exempt from CLAUDE.md Rule 1. The spike is throwaway by
+  contract: it must be deleted or absorbed into spec'd modules before Phase 2
+  ends
 
 **GATE 1 — human decision, do not delegate.**
 Read the verdict. Choose the product framing. Write D-001 in your own words,
@@ -27,8 +32,11 @@ Do not build the model, API or UI before this gate.
 ## Phase 1 — Inference layer  (~2h)
 Agent: `data-scientist`
 
-- M3 `stats.py`: effect sizes by variable type, bootstrap CIs, BH correction
-- `permutation_null` and the three-level verdict with plain-English explanations
+- M3 `stats.py`: the common statistic (`delta_logloss` — out-of-fold log-loss
+  improvement of a univariate model over the prior baseline) for every feature,
+  bootstrap percentile CIs, per-feature permutation null, BH correction
+- Native effect sizes (Cramer's V, eta squared, rho) as descriptive columns only
+- The three-level verdict on the common statistic, with plain-English explanations
 - Synthetic tests with known answers: random target -> `noise`, injected
   association -> `signal`
 - Cache the `SignalReport` to `artifacts/`
@@ -42,15 +50,23 @@ moves, the test is implemented wrong. Fix it before building on top of it.
 Agent: `data-scientist`
 
 - M2 `features.py`: Pipeline, feature metadata for the form, leakage test
-- M4 `model.py`: three models, CV, single test measurement, model permutation test
-- Calibration, Brier score, proportional-odds check
-- `ModelCard`, selection rule, serialisation
+- M4 `model.py`: three primary models, CV, single test measurement, model
+  permutation test
+- Calibration (per-class one-vs-rest + multiclass Brier), proportional-odds
+  check via the likelihood-ratio comparison against the multinomial fit
+- `ModelCard`, selection rule (log loss primary), serialisation
+- Delete `scripts/spike_signal_check.py` or absorb it into spec'd modules —
+  the spike must not survive past this phase
 
-Hard limit: exactly three models. Hyperparameter tuning is out of scope.
+Hard limit: three primary models plus a diagnostic multinomial model, fitted
+only when the proportional-odds assumption is violated or statsmodels fails to
+converge. Hyperparameter tuning is out of scope.
 
-**GATE 3.** Do the permutation importances from the model and the effect sizes
-from `stats.py` tell the same story? If not, find out why before proceeding —
-that discrepancy is either a bug or a finding, and both belong in the docs.
+**GATE 3.** Do the permutation importances from the model and the per-feature
+`delta_logloss` values from `stats.py` tell the same story? If not, find out
+why before proceeding — that discrepancy is either a bug or a finding, and both
+belong in the docs. Per the precedence rule in SPEC M3, the discrepancy is
+investigated and recorded but never changes `dataset_verdict`.
 
 ---
 
@@ -80,6 +96,9 @@ Human-led. This is not leftover time.
 - README: what it is, the headline finding first, quick start, architecture and
   why it is split this way, methodology, decisions and tradeoffs, limitations,
   how the AI tooling was used, repo map
+- Limitations must include the onsite-rows caveat (D-004): onsite respondents
+  stay in the sample, the target is read as satisfaction with the current work
+  arrangement, and conclusions about remote work specifically are weaker for it
 - DECISIONS.md: at least eight entries, each with a cost
 - docs/ai-collaboration.md: at least five concrete episodes
 - Re-run the README instructions literally, as written

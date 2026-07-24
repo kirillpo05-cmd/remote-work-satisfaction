@@ -14,18 +14,30 @@ pipeline is guaranteed to produce drivers whether or not any exist, and the user
 spends budget on a programme that changes nothing.
 
 **The product.** RWSAT verifies before it asserts. It measures each factor's
-association with satisfaction, bootstraps a confidence interval, corrects for
-multiple comparisons, compares the observed effect against a null distribution
-built by permuting the target, and returns one of three verdicts: `signal`,
-`inconclusive`, `noise`. Only then does it predict — and it shows the prior class
-distribution next to every prediction so the user can see how much the model
-actually adds.
+association with satisfaction on one common scale — the out-of-fold log-loss
+improvement of a univariate model over the prior baseline (see M3) — bootstraps
+a confidence interval, corrects for multiple comparisons, compares the observed
+statistic against a null distribution built by permuting the target, and returns
+one of three verdicts: `signal`, `inconclusive`, `noise`. Only then does it
+predict — and it shows the prior class distribution next to every prediction so
+the user can see how much the model actually adds.
 
 **The dataset caveat.** This is a synthetic dataset of 5,000 generated records.
 There is a reasonable suspicion that its features are independent of the target,
 i.e. that no learnable signal exists. That is a hypothesis to be tested by code in
 Phase 0, not an assumption. The product is designed to be useful under either
-outcome.
+outcome. Pre-flight evidence on this point is recorded in the Data quality
+section below.
+
+**The onsite rows.** Employees with `Work_Location == "Onsite"` (1,637 of 5,000)
+stay in the sample. The target is therefore read as a general satisfaction
+rating with the respondent's current work arrangement, and `Work_Location` is
+modelled as a feature, never used as a filter. It is the one feature that could
+plausibly carry a real effect on this target, and dropping a third of the sample
+would remove the only meaningful comparison available. The cost: for onsite
+respondents the target's interpretation is weaker, and any conclusion about
+remote work specifically must be read with that caveat (D-004). This limitation
+goes into the README.
 
 **Audience.** Primary: an HR analyst who makes budget decisions and does not read
 p-values. Needs a verdict with an honest confidence attached. Secondary: a data
@@ -48,6 +60,57 @@ questions.
 
 ---
 
+## Data quality — pre-flight findings
+
+Recorded from direct inspection of the raw CSV on 2026-07-24, **before any
+statistical testing**. These observations set the prior for Phase 0; they do not
+replace it.
+
+- Every categorical column is near-uniform across its levels, including the
+  target: `Unsatisfied` 1,677 / `Neutral` 1,648 / `Satisfied` 1,675.
+- 1,607 rows (32%) have `Years_of_Experience > Age - 16`, i.e. a working life
+  that began before age 16 — including `EMP0021`, age 26 with 33 years of
+  experience.
+- No cell in the CSV is empty. The only missing-looking values are the literal
+  strings `"None"` in `Mental_Health_Condition` (1,196 rows) and
+  `Physical_Activity` (1,629 rows), and both are meaningful categories, not
+  missing data (see M1).
+
+The internally impossible Age/Experience pairs are independent evidence that the
+columns were generated independently of one another: no joint constraint between
+columns survived generation, so a joint relationship with the target is unlikely
+to have been built in either. This was established before the signal check and
+is why the product is designed to remain useful when no signal is found.
+
+---
+
+## Configuration (`src/rwsat/config.py`)
+
+Every threshold, sample size and tunable constant lives in
+`src/rwsat/config.py`. The spec references these constants **by name**; no
+literal thresholds appear in function signatures or module code.
+
+| Name | Value | Used for |
+|---|---|---|
+| `SEED` | 42 | sole source for every random operation |
+| `RAW_PATH` | `data/raw/Impact_of_Remote_Work_on_Mental_Health.csv` | `load_raw` |
+| `TEST_SIZE` | 0.2 | train/test split |
+| `N_SPLITS` | 5 | stratified CV folds (univariate OOF statistic and model CV) |
+| `N_BOOT` | 2000 | bootstrap resamples for confidence intervals |
+| `N_PERM` | 500 | per-feature permutation null |
+| `N_PERM_MODEL` | 200 | model-level permutation test |
+| `ALPHA` | 0.05 | significance level applied to BH-adjusted p-values |
+| `NOISE_PERMUTATION_P` | 0.2 | lower bound for the `noise` verdict |
+| `DELTA_NEGLIGIBLE` | 0.01 | negligible out-of-fold log-loss improvement, nats per observation |
+| `BASELINE_SD_MULTIPLIER` | 2 | "beats baseline" margin, in CV standard deviations |
+| `CONFIDENCE_DEVIATION_THRESHOLD` | 0.10 | high/low split for `Prediction.confidence` |
+| `MIN_CATEGORY_N` | 5 | categories below this merge into `Other` for testing |
+
+All bootstrap confidence intervals use the **percentile method**; BCa is
+unnecessary at this sample size.
+
+---
+
 ## M1 — Data layer (`src/rwsat/data.py`)
 
 ### User stories
@@ -60,48 +123,85 @@ questions.
 ### Data model
 `ColumnSpec` (dataclass): `name: str`, `dtype: Literal["int","float","cat","ord","bin"]`,
 `role: Literal["feature","target","identifier","dropped"]`,
-`categories: list[str] | None`, `order: list[str] | None`, `missing_means: str | None`.
+`categories: list[str] | None`, `order: list[str] | None`.
 
 `SCHEMA: dict[str, ColumnSpec]` — the single source of truth for columns.
 
 `TARGET = "Satisfaction_with_Remote_Work"`, ordered
 `["Unsatisfied", "Neutral", "Satisfied"]`.
 
-Expected columns (verify against the CSV in Phase 0 and correct this list if it
-differs): `Employee_ID` (drop), `Age`, `Gender`, `Job_Role`, `Industry`,
-`Years_of_Experience`, `Work_Location`, `Hours_Worked_Per_Week`,
-`Number_of_Virtual_Meetings`, `Work_Life_Balance_Rating` (ord 1-5),
-`Stress_Level` (ord), `Mental_Health_Condition` (nulls mean "no condition"),
-`Access_to_Mental_Health_Resources` (bin), `Productivity_Change`,
-`Social_Isolation_Rating` (ord 1-5), `Company_Support_for_Remote_Work` (ord 1-5),
-`Physical_Activity`, `Sleep_Quality` (ord), `Region`, and the target.
+The schema below was verified against the CSV on 2026-07-24 (5,000 rows,
+20 columns, no empty cells). Every category value found in the CSV is
+enumerated; ordinal orders are declared here and nowhere else.
+
+| Column | dtype | role | values / range |
+|---|---|---|---|
+| `Employee_ID` | cat | identifier (dropped) | `EMP0001`…, unique |
+| `Age` | int | feature | 22–60 |
+| `Gender` | cat | feature | `Female`, `Male`, `Non-binary`, `Prefer not to say` |
+| `Job_Role` | cat | feature | `Data Scientist`, `Designer`, `HR`, `Marketing`, `Project Manager`, `Sales`, `Software Engineer` |
+| `Industry` | cat | feature | `Consulting`, `Education`, `Finance`, `Healthcare`, `IT`, `Manufacturing`, `Retail` |
+| `Years_of_Experience` | int | feature | 1–35 |
+| `Work_Location` | cat | feature | `Hybrid`, `Onsite`, `Remote` |
+| `Hours_Worked_Per_Week` | int | feature | 20–60 |
+| `Number_of_Virtual_Meetings` | int | feature | 0–15 |
+| `Work_Life_Balance_Rating` | ord | feature | 1 < 2 < 3 < 4 < 5 |
+| `Stress_Level` | ord | feature | `Low` < `Medium` < `High` |
+| `Mental_Health_Condition` | cat | feature | `Anxiety`, `Burnout`, `Depression`, `None` — `"None"` is a meaningful category (no condition), **not** missing data |
+| `Access_to_Mental_Health_Resources` | bin | feature | `No`, `Yes` |
+| `Productivity_Change` | ord | feature | `Decrease` < `No Change` < `Increase` |
+| `Social_Isolation_Rating` | ord | feature | 1 < 2 < 3 < 4 < 5 |
+| `Satisfaction_with_Remote_Work` | ord | **target** | `Unsatisfied` < `Neutral` < `Satisfied` |
+| `Company_Support_for_Remote_Work` | ord | feature | 1 < 2 < 3 < 4 < 5 |
+| `Physical_Activity` | ord | feature | `None` < `Weekly` < `Daily` |
+| `Sleep_Quality` | ord | feature | `Poor` < `Average` < `Good` |
+| `Region` | cat | feature | `Africa`, `Asia`, `Europe`, `North America`, `Oceania`, `South America` |
+
+18 features, one target, one identifier.
 
 ### Public interface
 ```python
-load_raw(path: Path = RAW_PATH) -> pd.DataFrame
-validate(df: pd.DataFrame) -> ValidationReport     # returns a report, does not raise
+load_raw(path: Path = RAW_PATH) -> pd.DataFrame    # raises on unusable input
+validate(df: pd.DataFrame) -> ValidationReport     # returns a report, never raises
 prepare(df: pd.DataFrame) -> pd.DataFrame          # drop id, cast types, order categories
-split(df, test_size=0.2, seed=SEED) -> tuple[pd.DataFrame, pd.DataFrame]  # stratified
+split(df, test_size=TEST_SIZE, seed=SEED) -> tuple[pd.DataFrame, pd.DataFrame]  # stratified
 ```
 `ValidationReport`: `missing_columns`, `unexpected_columns`, `dtype_mismatches`,
 `unexpected_categories`, `null_counts`, `is_valid: bool`.
 
 ### Business logic
+- **`load_raw` passes `keep_default_na=False`** (and sets no `na_values`). The
+  strings `"None"` in `Mental_Health_Condition` (1,196 rows) and
+  `Physical_Activity` (1,629 rows) are meaningful values, not missing data.
+  pandas' default `na_values` would silently convert them to `NaN`, and M2's
+  `most_frequent` imputer would then rewrite roughly a third of
+  `Physical_Activity` from "no exercise" to `"Weekly"`. After parsing,
+  `load_raw` asserts that the literal string `"None"` survived loading in both
+  columns (non-zero counts, zero `NaN`). There is **no** null-to-`"None"`
+  conversion anywhere in the codebase — the verified CSV contains no empty
+  cells, so nothing needs converting. Genuinely missing data would arrive as an
+  empty string and is surfaced by `validate` as an unexpected category.
+- **Raise/report boundary.** `load_raw` raises on unusable input: missing file
+  (`FileNotFoundError` naming the expected path and the download step), empty
+  frame or missing header (`ValueError` before any computation). `validate`
+  covers schema-level problems — wrong columns, wrong dtypes, unexpected
+  categories — by returning a `ValidationReport`, and never raises; callers
+  decide what a failed report means for them.
 - `Employee_ID` is always dropped: an identifier is not a feature.
-- Nulls in `Mental_Health_Condition` become an explicit `"None"` category. This is
-  absence of a condition, not absence of data; imputing the mode would be wrong.
-- No other imputation happens here — that belongs to the Pipeline in M2, otherwise
+- No imputation happens here — that belongs to the Pipeline in M2, otherwise
   statistics leak from the full sample.
-- Ordinal columns get `pd.CategoricalDtype(ordered=True)` with hand-written order.
+- Ordinal columns get `pd.CategoricalDtype(ordered=True)` with the order
+  declared in SCHEMA.
 - The split is stratified on the target, seeded from config.
 
 ### Edge cases
 | Situation | Expected behaviour |
 |---|---|
-| File missing | `FileNotFoundError` naming the expected path and the download step |
+| File missing | `load_raw` raises `FileNotFoundError` naming the expected path and the download step |
+| Empty dataframe | `load_raw` raises `ValueError` before any computation |
+| `"None"` parsed as `NaN` | `load_raw`'s post-parse assertion fails loudly — this means `keep_default_na` was lost in a refactor |
 | Required column absent | `validate` returns `is_valid=False`; training exits with a clear message |
-| Category not in SCHEMA | Logged warning, value preserved, listed in the report |
-| Empty dataframe | `ValueError` before any computation |
+| Category not in SCHEMA (including empty strings) | Logged warning, value preserved, listed in the report |
 | Duplicate `Employee_ID` | Reported as a warning; rows are not dropped without an explicit decision |
 
 ---
@@ -128,6 +228,11 @@ feature_metadata(schema) -> list[FeatureMeta]
   `OneHotEncoder(handle_unknown="ignore", drop="first")`.
 - Ordinal: `OrdinalEncoder` with explicit `categories=` from SCHEMA. Order is
   declared by hand, never inferred from the data.
+- The imputers exist for inference-time payloads with missing fields
+  (`POST /predict`), not for the training data: the raw CSV contains no missing
+  values once M1 loads it with `keep_default_na=False`. This safety depends on
+  M1 — if `"None"` were ever parsed as `NaN`, `most_frequent` would silently
+  rewrite it, which is exactly the failure M1's assertion guards against.
 - Every transformer sits inside the `Pipeline` passed to cross-validation. No
   `.fit()` is called outside a training fold.
 
@@ -151,34 +256,76 @@ The core of the product. Answers question 1.
 ### User stories
 - As an HR analyst, I want to know whether a factor affects satisfaction and how
   much I can trust that.
-- As an HR analyst, I want factors ranked by strength of association.
+- As an HR analyst, I want factors ranked on one scale that means the same thing
+  for every factor.
 - As a data scientist, I want to see the multiple-comparison correction.
-- As a data scientist, I want the observed effect placed against a null
+- As a data scientist, I want the observed statistic placed against a null
   distribution, not a single p-value.
 - As any user, I want the words "indistinguishable from noise" when that is true.
+
+### The common statistic
+
+The features are a mix of nominal, ordinal and numeric. Native effect sizes
+(Cramer's V, eta squared, Spearman's rho) do not share a scale — eta squared
+0.04 and Cramer's V 0.04 do not denote the same amount of association — so
+ranking them in one table was not meaningful, and the negligibility threshold
+was undefined for 9 of the 18 features (D-002). One statistic is therefore
+computed for every feature regardless of type:
+
+**`delta_logloss` — the out-of-fold log-loss improvement of a univariate model
+over the prior baseline**, in nats per observation. Positive means the feature
+carries information about the target.
+
+Computation for a feature X:
+1. Baseline: the prior — training-fold class frequencies predicted for every
+   row (equivalent to `DummyClassifier(strategy="prior")`).
+2. Univariate model: a `Pipeline` of the per-type encoder (numeric ->
+   `StandardScaler`; categorical -> one-hot; ordinal -> integer codes in SCHEMA
+   order) and multinomial `LogisticRegression` with default regularisation,
+   seeded from config.
+3. Stratified `N_SPLITS`-fold CV on the **training split only** — the held-out
+   test set never enters univariate screening. Collect out-of-fold predicted
+   probabilities for both models.
+4. `delta_logloss` = mean over rows of (per-row baseline log loss − per-row
+   model log loss).
+
+Uncertainty and significance:
+- CI: bootstrap over the per-row out-of-fold loss differences, `N_BOOT`
+  resamples, percentile method. No refitting inside the bootstrap.
+- Null distribution: permute the target `N_PERM` times and recompute the full
+  out-of-fold `delta_logloss` each time (refit per permutation).
+  `permutation_p` = share of permutations with a delta >= the observed one.
+- Benjamini-Hochberg across all features, applied to the permutation p-values.
+
+This statistic is the ranking key for `GET /effects` and the **sole basis of
+the verdict**. The native effect sizes are still computed and reported in
+`EffectResult` as descriptive columns, but they never drive sorting or
+verdicts.
 
 ### Data model
 ```python
 @dataclass
 class EffectResult:
     feature: str
-    test: Literal["chi2", "kruskal", "spearman"]
-    effect_size: float          # Cramer's V | eta^2 | rho
-    effect_name: str
-    ci_low: float               # bootstrap, 2000 resamples
-    ci_high: float
-    p_value_raw: float
-    p_value_adj: float          # Benjamini-Hochberg across all features
-    permutation_p: float        # share of permutations with effect >= observed
-    null_mean: float
+    # --- the common statistic: sole basis for ranking and verdict ---
+    delta_logloss: float         # OOF log-loss improvement over the prior baseline
+    delta_ci_low: float          # bootstrap percentile CI, N_BOOT resamples
+    delta_ci_high: float
+    permutation_p: float         # share of null deltas >= observed
+    permutation_p_adj: float     # Benjamini-Hochberg across all features
+    null_mean: float             # of the permutation null of delta_logloss
     null_p95: float
     verdict: Literal["signal", "inconclusive", "noise"]
-    explanation: str            # one plain-English sentence, no jargon
+    explanation: str             # one plain-English sentence, no jargon
     n: int
+    # --- native effect size: descriptive only ---
+    native_test: Literal["chi2", "kruskal", "spearman"]
+    native_effect_size: float    # Cramer's V | eta^2 | rho
+    native_effect_name: str
 
 @dataclass
 class SignalReport:
-    effects: list[EffectResult]
+    effects: list[EffectResult]  # sorted by delta_logloss, descending
     n_features_tested: int
     n_signal: int
     family_wise_note: str
@@ -187,33 +334,41 @@ class SignalReport:
 
 ### Public interface
 ```python
-effect_for(df, feature, target, n_boot=2000, n_perm=500, seed=SEED) -> EffectResult
-signal_report(df, target, features=None) -> SignalReport
-permutation_null(df, feature, target, n_perm) -> np.ndarray
+effect_for(df, feature, target, n_boot=N_BOOT, n_perm=N_PERM, seed=SEED) -> EffectResult
+signal_report(df, target, features=None) -> SignalReport   # df is the training split
+permutation_null(df, feature, target, n_perm=N_PERM) -> np.ndarray  # null deltas
 ```
 
 ### Business logic
-- Test selection by variable type: categorical -> chi-square with Cramer's V;
-  numeric -> Kruskal-Wallis with eta-squared; ordinal -> Spearman against the
-  ordered target.
+- Native test selection stays by variable type: categorical -> chi-square with
+  Cramer's V; numeric -> Kruskal-Wallis with eta-squared; ordinal -> Spearman
+  against the ordered target. Descriptive columns only.
 - Benjamini-Hochberg correction is always applied across the full feature family,
   even when a single feature is requested.
-- Verdict rules:
-  - `signal`: `p_value_adj < 0.05` AND `permutation_p < 0.05` AND the confidence
-    interval excludes the negligible-effect threshold (Cramer's V < 0.1).
-  - `noise`: `permutation_p > 0.2` AND the upper CI bound is below the
-    negligibility threshold.
+- Verdict rules, all on the common statistic (constants from config):
+  - `signal`: `permutation_p_adj < ALPHA` AND `delta_ci_low > DELTA_NEGLIGIBLE`.
+  - `noise`: `permutation_p > NOISE_PERMUTATION_P` AND
+    `delta_ci_high < DELTA_NEGLIGIBLE`.
   - `inconclusive`: everything else. Never collapse this into a binary.
-- Dataset verdict is `signal_present` if any feature earns `signal`, else
-  `no_detectable_signal`.
+- **Dataset verdict — single definition and precedence.** `dataset_verdict` is
+  `signal_present` iff at least one feature's verdict is `signal` under the
+  common statistic; otherwise `no_detectable_signal`. The per-feature common
+  statistic is the sole authority. The model-level permutation test (M4) is a
+  diagnostic: it appears in the ModelCard and **never alters**
+  `dataset_verdict`. If the two appear to conflict — the full model beats its
+  permutation null while no single feature earns `signal`, or the reverse —
+  the conflict is recorded as a warning in the ModelCard and investigated at
+  Gate 3; the dataset verdict does not move. The univariate and model-level
+  conclusions therefore cannot disagree about the product's headline verdict,
+  because only one of them defines it.
 
 ### Edge cases
 | Situation | Behaviour |
 |---|---|
-| Constant feature | No test run; verdict `noise`, flagged `constant` |
-| Category with n < 5 | Merged into `Other`, recorded in the result |
-| Nulls in the feature | Pairwise deletion; `n` reflects the actual sample used |
-| n_perm too small for a precise p | `permutation_p` returned with a note on `1/n_perm` resolution |
+| Constant feature | Univariate model equals the baseline; `delta_logloss = 0`, verdict `noise`, flagged `constant` |
+| Category with n < `MIN_CATEGORY_N` | Merged into `Other`, recorded in the result |
+| `NaN` in a feature (should not occur after M1) | Row excluded; `n` reflects the actual sample used; warning attached |
+| `N_PERM` too small for a precise p | `permutation_p` returned with a note on the `1/N_PERM` resolution |
 
 ---
 
@@ -235,14 +390,15 @@ class ModelCard:
     trained_at: datetime
     n_train: int
     n_test: int
-    metrics: dict[str, float]          # accuracy, balanced_accuracy, macro_f1, log_loss, brier
+    metrics: dict[str, float]          # log_loss (primary), balanced_accuracy (secondary),
+                                       # accuracy, macro_f1, brier (multiclass)
     baseline_metrics: dict[str, float]
     lift_over_baseline: dict[str, float]
-    cv_mean: float
+    cv_mean: float                     # of log loss, the primary metric
     cv_std: float
-    permutation_test_p: float          # model significance against permuted targets
+    permutation_test_p: float          # model log loss against N_PERM_MODEL permuted targets
     is_better_than_baseline: bool
-    calibration: list[tuple[float, float]]
+    calibration: dict[str, list[tuple[float, float]]]  # one-vs-rest curve per class
     proportional_odds_ok: bool | None
     feature_effects: list[dict]        # permutation importance with CIs
     warnings: list[str]
@@ -261,34 +417,52 @@ class Prediction:
 ### Public interface
 ```python
 train_all(df) -> dict[str, ModelCard]   # dummy, ordinal_logit, gradient_boosting
+                                        # + multinomial, only when fitted (diagnostic)
 select_model(cards) -> str
 save(model, path) / load(path)
 predict_one(model, payload: dict) -> Prediction
 ```
 
 ### Business logic
-- Exactly three models, in this order:
+- Three primary models, in this order, plus a diagnostic multinomial model
+  fitted only when the proportional-odds assumption is violated or statsmodels
+  fails to converge:
   1. `DummyClassifier(strategy="prior")` — mandatory baseline.
   2. Ordinal logistic regression (statsmodels `OrderedModel`) — the primary
      interpretable model. The proportional-odds assumption is tested and the
      result recorded.
   3. `HistGradientBoostingClassifier` — an upper bound on achievable quality,
      not a candidate to win by default.
-- Evaluation: stratified 5-fold CV on train, then a single measurement on the
-  held-out test set. The test set is touched once.
-- "Better than baseline" means exceeding it by more than 2 CV standard deviations.
-- Model selection: choose the simplest model that is statistically
+  - Diagnostic: multinomial logistic regression, fitted under the two
+    conditions above, never otherwise.
+- **Primary metric: log loss** — a proper scoring rule, and the product returns
+  probabilities. Model selection and the model permutation test both run on log
+  loss. Balanced accuracy is reported as secondary; accuracy, macro-F1 and the
+  multiclass Brier score are reported for completeness.
+- Proportional-odds test: likelihood-ratio comparison of the ordinal fit
+  against the multinomial fit — statsmodels ships no Brant test (D-005).
+- Evaluation: stratified `N_SPLITS`-fold CV on train, then a single measurement
+  on the held-out test set. The test set is touched once.
+- "Better than baseline" means beating the baseline log loss by more than
+  `BASELINE_SD_MULTIPLIER` CV standard deviations.
+- Model selection: choose the simplest model whose log loss is statistically
   indistinguishable from the best one.
-- Calibration is mandatory. Brier score and calibration curve points always go
-  into the card.
+- Calibration is mandatory: a one-vs-rest calibration curve per class plus the
+  multiclass Brier score always go into the card.
+- `Prediction.confidence`: `"not_better_than_guessing"` whenever the selected
+  model does not beat baseline; otherwise `"high"` when
+  `max_deviation_from_prior > CONFIDENCE_DEVIATION_THRESHOLD`, `"low"` below it.
 - Feature influence: permutation importance with confidence intervals only.
+- Model permutation test: `N_PERM_MODEL` target shuffles, log loss as the
+  statistic. Diagnostic only — see the precedence rule in M3: this test never
+  alters `dataset_verdict`.
 
 ### Edge cases
 | Situation | Behaviour |
 |---|---|
 | No model beats baseline | Training does **not** fail. `is_better_than_baseline=False`, an explicit warning enters the card, the product keeps working |
-| Proportional-odds assumption violated | Recorded in the card; a multinomial model is additionally fitted for comparison |
-| statsmodels fails to converge | Logged; model marked unavailable; multinomial used instead |
+| Proportional-odds assumption violated | Recorded in the card; the diagnostic multinomial model is fitted for comparison |
+| statsmodels fails to converge | Logged; model marked unavailable; the diagnostic multinomial model is used instead |
 | Model artefact missing at API start | `/predict` returns 503 with the exact command to run |
 
 ---
@@ -300,14 +474,14 @@ GET  /health         -> 200 {"status","model_loaded","data_loaded"}
 GET  /schema         -> 200 {"features":[FeatureMeta],"target":{"name","classes"}}
                         The UI builds its form from this. Hardcoding fields in the
                         frontend is a bug.
-GET  /effects        -> 200 SignalReport, sorted by effect size
+GET  /effects        -> 200 SignalReport, ranked by delta_logloss descending
 GET  /effects/{name} -> 200 EffectResult | 404
 POST /predict        body {"features": {...}}
                      -> 200 Prediction | 422 (per-field reasons) | 503 (not trained)
                         Missing fields are allowed: filled with train median/mode
                         and flagged as "imputed:<field>".
 GET  /model-card     -> 200 ModelCard for the selected model | 503
-GET  /model-card/all -> 200 all three cards
+GET  /model-card/all -> 200 all cards (three primary; diagnostic multinomial when fitted)
 ```
 
 ### Business logic
@@ -328,19 +502,26 @@ The UI contains no business logic and imports no internal modules. HTTP only.
 **Screen 1 — Overview.** Sample size, target distribution, the dataset verdict in
 large type with a one-paragraph plain-English explanation.
 
-**Screen 2 — Factor Explorer** (question 1). Table of all features: effect size
-with CI, adjusted p-value, colour-coded verdict. Clicking a feature reveals a
-histogram of the permutation null distribution with a vertical line at the
-observed effect, plus an explanation of the test and the verdict. This chart is
-the product's key visual — it conveys "signal versus noise" without words.
+**Screen 2 — Factor Explorer** (question 1). Table of all features ranked by
+`delta_logloss` — the out-of-fold log-loss improvement over the prior baseline,
+the one number computed the same way for every factor — with its CI, the
+BH-adjusted permutation p-value, and the colour-coded verdict. Native effect
+sizes (Cramer's V / eta squared / rho) appear as descriptive columns, clearly
+labelled as not driving the ranking or the verdict. Clicking a feature reveals
+a histogram of the permutation null distribution of `delta_logloss` with a
+vertical line at the observed value, plus an explanation of the statistic and
+the verdict. This chart is the product's key visual — it conveys "signal versus
+noise" without words.
 
 **Screen 3 — Predict** (question 2). Form generated from `GET /schema`. Result
 shows three probabilities with the prior distribution in grey alongside. If
 `confidence == "not_better_than_guessing"`, a warning appears next to the result,
 above the fold, stating plainly that this must not drive decisions about people.
 
-**Screen 4 — Model Card.** All three models next to baseline, calibration curve,
-model permutation test, data validation report, selection rationale.
+**Screen 4 — Model Card.** All primary models next to baseline (plus the
+diagnostic multinomial model when it was fitted), per-class one-vs-rest
+calibration curves with the multiclass Brier score, model permutation test,
+data validation report, selection rationale.
 
 **Screen 5 — Methodology.** Static markdown: which tests, why the BH correction,
 how to read a verdict, known dataset limitations. Written by hand.
@@ -366,6 +547,26 @@ data/raw/*.csv  dataset committed, with LICENSE.md naming the source
 further steps. If the model artefact is absent, the API trains it on first start;
 the reviewer never runs training manually. No environment variable is required for
 the default path. README also documents a Docker-free path via `uv sync`.
+
+### CLI (`src/rwsat/cli.py`)
+
+Three commands, matching the Commands section of CLAUDE.md:
+
+- `uv run python -m rwsat.cli validate` — load the raw CSV via `load_raw` and
+  print the `ValidationReport`; exit code 1 when `is_valid` is `False`.
+- `uv run python -m rwsat.cli verify-signal` — run the signal-verification
+  protocol on the training split, write `artifacts/signal_report.json`, print
+  the dataset verdict with its one-paragraph explanation.
+- `uv run python -m rwsat.cli train` — train the primary models, run selection,
+  serialise the artefact and ModelCards. This is the exact command quoted by
+  `/predict`'s 503 response.
+
+### UI API base URL
+
+The UI reads the API base URL from the `RWSAT_API_URL` environment variable.
+The in-code default is `http://localhost:8000` (the Docker-free path);
+`compose.yaml` sets `RWSAT_API_URL=http://api:8000` for the ui service. Neither
+path requires the user to set anything, which keeps CLAUDE.md Rule 6 intact.
 
 ---
 

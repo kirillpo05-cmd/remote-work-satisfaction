@@ -19,9 +19,13 @@ work.
 
 Two configuration decisions worth naming:
 
-- The `reviewer` subagent has no `Write` or `Edit` permission. A reviewer that can
-  edit starts fixing instead of reporting, and the problem disappears from the
-  report along with the chance to discuss it.
+- The `reviewer` subagent is configured without `Write` or `Edit`, but it keeps
+  `Bash` so it can run tests — and Bash can write files. So this is a default
+  constraint, not an enforced guarantee: it lowers the chance the reviewer
+  starts fixing instead of reporting, where a fixed problem would disappear
+  from the report along with the chance to discuss it. Whether the reviewer
+  actually stayed read-only is checked by reading the diff after each review
+  pass, not assumed from the toolset.
 - Only the statistical and modelling agent runs on the larger model. The service
   and UI layers are mechanical enough that the smaller model handles them, and
   the cost difference is real over a long session.
@@ -50,8 +54,10 @@ get generated:
    conclude that no signal exists.
 5. Stale APIs: statsmodels OrderedModel usage, or FastAPI on_event instead of
    lifespan.
-6. Missing values: fillna with the mode on Mental_Health_Condition instead of an
-   explicit "None" category.
+6. Missing values: the original spec assumed nulls in Mental_Health_Condition
+   and converted them to a "None" category; pre-flight inspection showed the
+   CSV has no empty cells and pandas' default na_values was manufacturing the
+   nulls from literal "None" strings (fixed with keep_default_na=False, D-003).
 7. README prose: evaluative adjectives instead of numbers.
 -->
 
