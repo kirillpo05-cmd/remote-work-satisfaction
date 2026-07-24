@@ -230,10 +230,10 @@ headroom below ALPHA after correction. It is recorded as a correction to the
 design, not as tuning toward a desired outcome: the change was made after the
 verdict was already `no_detectable_signal` and can only make `signal` easier
 to reach, i.e. it works against the observed result, not for it.
-Cost: the per-feature screening is four times slower (about 45 minutes of the
-full protocol's runtime is permutation refits), and the bootstrap and
-permutation counts are no longer the same number, which is mildly confusing to
-read in the config table.
+Cost: the per-feature screening is four times slower — the measured
+verify-signal runtime is about 25 minutes, nearly all of it permutation
+refits — and the bootstrap and permutation counts are no longer the same
+number, which is mildly confusing to read in the config table.
 Status: accepted
 
 ---
@@ -255,6 +255,25 @@ fails loudly at the entry point, and the failure message contains the fix.
 Cost: `signal_report` can no longer screen ad-hoc frames with raw string
 columns — synthetic tests and callers must build properly typed columns,
 which is a small amount of ceremony per call site.
+Status: accepted
+
+---
+
+## D-012: The "fully empty feature" edge case is out of scope
+Context: SPEC M2's edge-case table promised "Fully empty feature -> excluded
+from the preprocessor, noted in the report". The Phase 4 review found the row
+had neither implementation nor test.
+Options: (a) implement data-driven column exclusion inside the preprocessor;
+(b) strike the row as unreachable in this product.
+Decision: (b).
+Rationale: M1's load assertion and the committed CSV guarantee no missing
+values at training time, and prediction payloads are single rows whose missing
+fields are filled per-field with flags — there is no path on which a fully
+empty column reaches the preprocessor. Exclusion logic would be dead code
+guarding an impossible state.
+Cost: if a future dataset replaces the committed CSV, an all-empty column
+would surface as imputer behaviour (constant fill) rather than a loud
+exclusion, and this decision must be revisited then.
 Status: accepted
 
 ---

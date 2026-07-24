@@ -102,10 +102,17 @@ def screen_overview() -> None:
             f"only look important."
         )
     n = max(effect["n"] for effect in report["effects"])
-    st.caption(
-        f"Screened on {n:,} training rows; a held-out set was kept untouched for "
-        f"the model evaluation. {report['family_wise_note']}"
-    )
+    size_note = f"Screened on {n:,} training rows"
+    try:
+        card = api_get("/model-card")
+        size_note = (
+            f"Sample: {card['n_train'] + card['n_test']:,} rows total — "
+            f"{card['n_train']:,} for screening and training, {card['n_test']:,} "
+            f"held out and touched once"
+        )
+    except ApiError:
+        pass  # no model yet; the screening count still tells the story
+    st.caption(f"{size_note}. {report['family_wise_note']}")
 
     try:
         prediction = api_post("/predict", {"features": {}})

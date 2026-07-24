@@ -150,6 +150,55 @@ def test_predict_flags(signal_result: TrainResult) -> None:
         predict_one(model, {"Employee_ID": "EMP0001"})
 
 
+def test_out_of_range_lowers_a_high_confidence(signal_result: TrainResult) -> None:
+    model = signal_result.model
+    in_range = predict_one(model, {"Stress_Level": "High"})
+    assert in_range.confidence == "high"  # strong injected signal, far from prior
+    out_of_range = predict_one(model, {"Stress_Level": "High", "Age": 200})
+    assert "out_of_range" in out_of_range.flags
+    assert out_of_range.confidence == "low"  # M2 edge case: lowered, not kept
+
+
+# --- the diagnostic multinomial model, both trigger conditions ---------------
+
+
+def test_proportional_odds_violation_fits_the_multinomial() -> None:
+    # Middle-category inflation: rising stress pushes mass into Neutral, so the
+    # two cumulative thresholds move in opposite directions — the definitional
+    # proportional-odds violation. (A V-shaped class mapping would NOT work
+    # here: stress enters the design as one linear ordinal code, and neither
+    # the ordinal nor the multinomial model can represent a mid-peak, so their
+    # likelihoods barely differ.)
+    rng = np.random.default_rng(21)
+    n = 600
+    df = _decorrelate(synthetic_frame(n), rng)
+    probs = {
+        "Low": [0.45, 0.10, 0.45],
+        "Medium": [0.30, 0.40, 0.30],
+        "High": [0.10, 0.80, 0.10],
+    }
+    draws = np.array([rng.choice(3, p=probs[s]) for s in df["Stress_Level"]])
+    df[TARGET] = np.array(CLASSES)[draws]
+    result = train_all(prepare(df), n_perm_model=2, seed=SEED)
+    assert result.cards["ordinal_logit"].proportional_odds_ok is False
+    assert "multinomial" in result.cards
+
+
+def test_ordinal_unavailable_falls_back_to_multinomial(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from rwsat import model as model_module
+
+    def broken_fit(self: object, x: object, y: object) -> object:
+        raise model_module._ModelUnavailable("forced failure for the test")
+
+    monkeypatch.setattr(model_module._OrderedLogit, "fit", broken_fit)
+    result = train_all(random_frame(seed=22), n_perm_model=2, seed=SEED)
+    assert "ordinal_logit" not in result.cards
+    assert "multinomial" in result.cards
+    assert result.selected in result.cards
+
+
 # --- persistence -------------------------------------------------------------
 
 

@@ -8,7 +8,7 @@ that fixes it.
 
 import json
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from typing import Any, Literal
@@ -159,7 +159,7 @@ def _load_state(app: FastAPI) -> None:
 
 def create_app() -> FastAPI:
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         _load_state(app)
         yield
 
@@ -202,6 +202,9 @@ def create_app() -> FastAPI:
         if app.state.model is None:
             raise HTTPException(503, detail=f"No trained model artefact. {TRAIN_FIX}")
         feature_specs = {n: s for n, s in SCHEMA.items() if s.role == "feature"}
+        # predict_one performs the same unknown-field check as a library
+        # invariant; this copy exists so the API can return a per-field 422
+        # for all problems at once instead of failing on the first.
         field_errors = [
             {"field": name, "reason": "unknown field"}
             for name in body.features

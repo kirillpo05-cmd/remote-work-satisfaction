@@ -247,7 +247,10 @@ feature_metadata(schema) -> list[FeatureMeta]
 |---|---|
 | Unknown category at inference | `handle_unknown="ignore"`; prediction returned with flag `unknown_category` |
 | Value outside the training range | Prediction returned with flag `out_of_range`, confidence lowered |
-| Fully empty feature | Excluded from the preprocessor, noted in the report |
+
+A "fully empty feature" row used to sit in this table; it was removed as
+unreachable — M1 guarantees the committed CSV has no missing values, and
+prediction payloads are single rows filled per-field (D-012).
 
 ### Test requirement
 A test must prove absence of leakage: fit the Pipeline on train and assert the

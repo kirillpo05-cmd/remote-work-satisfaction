@@ -10,7 +10,12 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./artifacts:/app/artifacts
+      # Named volume, not a host bind mount: on a Linux host Docker would
+      # create ./artifacts root-owned before the non-root container starts,
+      # and first-start training would die on Permission denied. The named
+      # volume initialises from the image's rwsat-owned /app/artifacts and
+      # works identically on every platform.
+      - artifacts:/app/artifacts
     healthcheck:
       test:
         - CMD
@@ -39,3 +44,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+volumes:
+  artifacts:
