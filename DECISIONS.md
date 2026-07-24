@@ -230,10 +230,10 @@ headroom below ALPHA after correction. It is recorded as a correction to the
 design, not as tuning toward a desired outcome: the change was made after the
 verdict was already `no_detectable_signal` and can only make `signal` easier
 to reach, i.e. it works against the observed result, not for it.
-Cost: the per-feature screening is four times slower — the measured
-verify-signal runtime is about 25 minutes, nearly all of it permutation
-refits — and the bootstrap and permutation counts are no longer the same
-number, which is mildly confusing to read in the config table.
+Cost: the per-feature screening is four times slower — measured verify-signal
+runtime is 16-25 minutes on the development machine depending on load, nearly
+all of it permutation refits — and the bootstrap and permutation counts are no
+longer the same number, which is mildly confusing to read in the config table.
 Status: accepted
 
 ---
