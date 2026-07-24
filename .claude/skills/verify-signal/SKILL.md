@@ -29,8 +29,10 @@ effect sizes as descriptive columns. Save the table.
 against baseline on every metric; log loss decides.
 
 **4. Model permutation test.** Shuffle the target `N_PERM_MODEL` times, retrain
-the selected model, collect the null distribution of log loss, and compute the
-share of shuffles that did at least as well as the real fit.
+the gradient boosting model (not the selected one — the dummy's test is
+degenerate by construction, see SPEC M4 and D-007), collect the null
+distribution of log loss, and compute the p-value as (1 + number of shuffles
+that did at least as well) / (1 + `N_PERM_MODEL`).
 
 **5. Verdict.** `dataset_verdict` follows SPEC M3, and only SPEC M3:
 `signal_present` iff at least one feature earns `signal` from the common

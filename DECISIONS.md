@@ -140,6 +140,59 @@ Status: accepted
 
 ---
 
+## D-007: Model-level permutation test runs on the gradient boosting model
+Context: the verify-signal skill said to permutation-test "the selected
+model". On this dataset the selection rule picks the prior dummy, and a
+dummy's permutation test is degenerate by construction: the prior is invariant
+under target shuffles, so every null draw equals the observed value and p = 1
+tells you nothing. The spec implicitly assumed a non-degenerate selected
+model.
+Options: (a) follow the wording and report a vacuous test; (b) run the
+diagnostic on the gradient boosting model, the only fitted model able to
+express interactions — the case the diagnostic exists to guard.
+Decision: (b), ratified after the Phase 0 run.
+Rationale: the test's purpose (SPEC M3 known limitation) is to catch
+multivariate structure the univariate screen cannot see; that purpose selects
+the model, not the selection rule.
+Cost: when the dummy wins selection, the diagnostic describes a model the
+product will not ship, and the ModelCard must say which model it describes.
+Status: accepted
+
+---
+
+## D-008: Permutation p-values use the add-one convention
+Context: the spike computed permutation p as k/N — the share of null draws at
+least as extreme as the observed statistic — which can return exactly zero.
+Options: (a) k/N; (b) (1 + k) / (1 + N) (Phipson-Smyth), counting the observed
+statistic as one draw under its own null.
+Decision: (b), applied everywhere a permutation p is computed.
+Rationale: the observed statistic is itself a draw under the null; a p-value
+of exactly zero asserts an impossibility the test cannot support.
+Cost: the attainable floor is 1/(N+1) — with N_PERM = 500 that is 0.002, and
+after BH across 18 features the smallest achievable adjusted p is about
+0.036. N_PERM cannot be reduced much without making `signal` unreachable at
+ALPHA = 0.05.
+Status: accepted
+
+---
+
+## D-009: "2 CV standard deviations" is measured on paired per-fold differences
+Context: the spec said "beats baseline by more than BASELINE_SD_MULTIPLIER CV
+standard deviations" without saying whose standard deviation; the spike used
+the candidate model's own.
+Options: (a) the candidate model's CV std; (b) the baseline's; (c) the std
+(ddof=1) of the paired per-fold differences on the shared folds.
+Decision: (c), for both the baseline comparison and the model-selection tie
+rule.
+Rationale: the folds are shared, so fold-to-fold difficulty is common to both
+models; the paired estimate removes that shared variance and measures what the
+rule actually asks about — the stability of the gap.
+Cost: with N_SPLITS = 5 the paired std is estimated from five numbers and is
+itself noisy; the rule remains a heuristic gate, not a formal test.
+Status: accepted
+
+---
+
 <!-- Decisions that must be recorded as the build proceeds:
 
 - Ordinal versus multinomial target treatment

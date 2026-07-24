@@ -61,6 +61,50 @@ get generated:
 7. README prose: evaluative adjectives instead of numbers.
 -->
 
+## Episode 1: permutation p-values that could reach zero
+Task: Phase 0 spike, permutation tests for the common statistic and the model.
+What the assistant proposed: p = k/N — the share of null draws at least as
+extreme as the observed statistic — matching the spec's literal wording at the
+time.
+Why it did not fit: the observed statistic is itself a draw under the null; a
+p-value of exactly zero asserts an impossibility the test cannot support, and
+the spike duly printed perm_p=0.000 for Work_Location in the smoke run.
+What was done instead: (1 + k) / (1 + N) everywhere (D-008), with the spec,
+skill and rules updated to match.
+What it says: the assistant implemented the spec as written rather than the
+statistically correct convention; the human review caught what the spec
+missed. Wording in a spec gets executed literally.
+
+## Episode 2: whose standard deviation is "2 CV standard deviations"?
+Task: the "beats baseline" and model-selection rules in the Phase 0 spike.
+What the assistant proposed: compare the mean log-loss gap against two CV
+standard deviations of the candidate model's own fold scores, and it flagged
+the ambiguity in its report rather than resolving it.
+Why it did not fit: the folds are shared between models, so fold-to-fold
+difficulty is common variance; a model's own std conflates that shared
+variance with the stability of the gap being tested.
+What was done instead: the std (ddof=1) of the paired per-fold differences
+(D-009), for both rules.
+What it says: when the assistant hits an underspecified rule it picks a
+defensible reading and flags it — the flag worked, but the default it picked
+was not the best one. Ambiguities in specs are cheaper to resolve before the
+first implementation than after.
+
+## Episode 3: the degenerate permutation test the spec didn't foresee
+Task: the model-level permutation test in the Phase 0 spike.
+What the assistant proposed: deviating from the skill's instruction to test
+"the selected model", because the selection rule picks the prior dummy on this
+dataset and a dummy's permutation test is degenerate (the prior is invariant
+under target shuffles; p = 1 by construction). It ran the test on the gradient
+boosting model instead and asked for ratification.
+Why it did not fit (the original wording): the skill assumed a non-degenerate
+selected model, which is exactly the assumption a no-signal dataset violates.
+What was done instead: the deviation was ratified and recorded (D-007); spec
+and skill updated.
+What it says: the useful failure mode — the assistant followed the intent of
+the diagnostic rather than its letter, and surfaced the conflict instead of
+silently picking either.
+
 ---
 
 ## Where the tooling helped most

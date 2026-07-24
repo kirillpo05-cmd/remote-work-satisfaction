@@ -161,7 +161,9 @@ def screen_features(
         for p in range(n_perm):
             y_perm = rng_perm.permutation(y)
             null[p] = oof_row_deltas(values, codes, n_levels, y_perm).mean()
-        perm_p = float((null >= delta).mean())
+        # Phipson-Smyth: the observed statistic is itself a draw under the null,
+        # so p can never be exactly zero (D-008).
+        perm_p = float((1 + (null >= delta).sum()) / (1 + n_perm))
 
         test, size, size_name = native_effect(name, df[name], y)
         results.append(
@@ -233,7 +235,7 @@ def build_design(df_tr: pd.DataFrame, df_va: pd.DataFrame) -> tuple[np.ndarray, 
 
 def cv_model(
     df: pd.DataFrame, y: np.ndarray, kind: str
-) -> tuple[dict[str, dict[str, float]], list[str]]:
+) -> tuple[dict[str, dict[str, float]], list[dict[str, float]], list[str]]:
     """Per-fold CV metrics for one model kind: 'prior', 'stratified', 'ordinal', 'hgb'."""
     per_fold: list[dict[str, float]] = []
     notes: list[str] = []
@@ -269,7 +271,7 @@ def cv_model(
         }
         for metric in per_fold[0]
     }
-    return summary, notes
+    return summary, per_fold, notes
 
 
 # ---------------------------------------------------------------- step 4 ---
@@ -303,7 +305,7 @@ def model_permutation_test(
         "null_mean": float(null.mean()),
         "null_std": float(null.std()),
         "null_p05": float(np.percentile(null, 5)),
-        "p_value": float((null <= observed_logloss).mean()),
+        "p_value": float((1 + (null <= observed_logloss).sum()) / (1 + n_perm_model)),
     }
 
 
@@ -311,12 +313,18 @@ def model_permutation_test(
 
 
 def main() -> int:
+    global SEED
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke", action="store_true", help="tiny iteration counts")
+    parser.add_argument(
+        "--seed", type=int, default=SEED, help="override the seed (GATE 2 stability check)"
+    )
     args = parser.parse_args()
     n_perm = 20 if args.smoke else N_PERM
     n_boot = 200 if args.smoke else N_BOOT
     n_perm_model = 5 if args.smoke else N_PERM_MODEL
+    default_seed = SEED
+    SEED = args.seed  # module-global rebind; every helper reads it at call time
 
     t_start = time.time()
     raw = load_raw()
@@ -325,16 +333,21 @@ def main() -> int:
         print(f"Validation failed: {report}", flush=True)
         return 1
     df_all = prepare(raw)
-    train_df, _test_df = split(df_all)  # test set: loaded, split off, never used here
+    train_df, _test_df = split(df_all, seed=SEED)  # test set: split off, never used here
     train_df = train_df.reset_index(drop=True)
     y = train_df[TARGET].cat.codes.to_numpy()
     x_df = train_df.drop(columns=[TARGET])
     print(f"Train split: {len(train_df)} rows; test split untouched.", flush=True)
 
     print("\n[1/4] Dummy baselines (OOF on train)", flush=True)
-    baselines = {kind: cv_model(x_df, y, kind)[0] for kind in ("prior", "stratified")}
-    for kind, summary in baselines.items():
-        print(f"  {kind:<11s} " + "  ".join(f"{m}={v['mean']:.4f}" for m, v in summary.items()))
+    baselines: dict[str, dict[str, dict[str, float]]] = {}
+    fold_metrics: dict[str, list[dict[str, float]]] = {}
+    for kind in ("prior", "stratified"):
+        baselines[kind], fold_metrics[kind], _ = cv_model(x_df, y, kind)
+        print(
+            f"  {kind:<11s} "
+            + "  ".join(f"{m}={v['mean']:.4f}" for m, v in baselines[kind].items())
+        )
 
     print(f"\n[2/4] Common statistic per feature ({n_perm} permutations)", flush=True)
     effects = screen_features(x_df, y, n_perm=n_perm, n_boot=n_boot)
@@ -344,18 +357,23 @@ def main() -> int:
     models: dict[str, dict[str, dict[str, float]]] = {}
     model_notes: dict[str, list[str]] = {}
     for kind in ("ordinal", "hgb"):
-        models[kind], model_notes[kind] = cv_model(x_df, y, kind)
+        models[kind], fold_metrics[kind], model_notes[kind] = cv_model(x_df, y, kind)
         print(
             f"  {kind:<8s} "
             + "  ".join(f"{m}={v['mean']:.4f}±{v['std']:.4f}" for m, v in models[kind].items())
         )
 
-    base_ll = baselines["prior"]["log_loss"]
-    beats = {
-        kind: (base_ll["mean"] - models[kind]["log_loss"]["mean"])
-        > BASELINE_SD_MULTIPLIER * models[kind]["log_loss"]["std"]
-        for kind in models
-    }
+    # "Beats baseline": mean paired per-fold log-loss difference exceeds
+    # BASELINE_SD_MULTIPLIER standard deviations (ddof=1) of those paired
+    # differences — the folds are shared, so the paired estimate accounts for
+    # the correlation between models (D-009).
+    base_folds = np.array([f["log_loss"] for f in fold_metrics["prior"]])
+    beats: dict[str, bool] = {}
+    paired: dict[str, dict[str, float]] = {}
+    for kind in models:
+        diff = base_folds - np.array([f["log_loss"] for f in fold_metrics[kind]])
+        paired[kind] = {"mean_diff": float(diff.mean()), "std_diff": float(diff.std(ddof=1))}
+        beats[kind] = bool(diff.mean() > BASELINE_SD_MULTIPLIER * diff.std(ddof=1))
 
     print(f"\n[4/4] Model-level permutation test ({n_perm_model} shuffles, HGB)", flush=True)
     perm_test = model_permutation_test(
@@ -377,13 +395,15 @@ def main() -> int:
         "n_signal": n_signal,
         "models": models,
         "model_notes": model_notes,
+        "paired_fold_logloss_diff_vs_prior": paired,
         "beats_baseline_on_logloss": beats,
         "model_permutation_test": perm_test,
         "dataset_verdict": dataset_verdict,
         "runtime_seconds": round(time.time() - t_start, 1),
     }
     ARTIFACTS_DIR.mkdir(exist_ok=True)
-    path = ARTIFACTS_DIR / "signal_report.json"
+    suffix = "" if default_seed == SEED else f"_seed{SEED}"
+    path = ARTIFACTS_DIR / f"signal_report{suffix}.json"
     path.write_text(json.dumps(out, indent=2))
     print(f"\nDataset verdict: {dataset_verdict}  (n_signal={n_signal}/18)")
     print(f"Report written to {path}  ({out['runtime_seconds']}s)")

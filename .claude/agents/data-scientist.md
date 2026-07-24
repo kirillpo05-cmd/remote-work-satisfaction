@@ -31,7 +31,9 @@ conclusion.
 7. **Baseline first.** `DummyClassifier(strategy="prior")` is trained and measured
    before any real model. Every reported metric sits next to its baseline.
 8. **Simplest model that ties wins.** A complex model must beat the simple one by
-   more than 2 CV standard deviations to be selected.
+   more than `BASELINE_SD_MULTIPLIER` standard deviations of the paired
+   per-fold differences to be selected (shared folds — never a model's own
+   CV std).
 9. **The test set is touched once.** All choices are made on cross-validation.
 10. **No leakage, ever.** Split precedes preprocessing; all transformers live
     inside the Pipeline. This is verified by a test, not by inspection.
@@ -39,8 +41,10 @@ conclusion.
 # Patterns
 
 **Signal verification.** Build a null distribution by permuting the target at
-least 500 times, place the observed metric on it, and report the share of
-permutations that did at least as well. That share is the honest p-value.
+least 500 times, place the observed metric on it, and report
+(1 + the number of permutations that did at least as well) / (1 + N) — the
+observed statistic counts as one draw under its own null. That is the honest
+p-value, and it can never be exactly zero.
 
 **Three-level verdict.** `signal`, `inconclusive`, `noise`. Never collapse to a
 binary — `inconclusive` is an honest state and the user must see it.

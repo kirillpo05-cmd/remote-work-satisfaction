@@ -308,7 +308,12 @@ Uncertainty and significance:
   resamples, percentile method. No refitting inside the bootstrap.
 - Null distribution: permute the target `N_PERM` times and recompute the full
   out-of-fold `delta_logloss` each time (refit per permutation).
-  `permutation_p` = share of permutations with a delta >= the observed one.
+  `permutation_p` = (1 + number of null deltas >= observed) / (1 + `N_PERM`)
+  (Phipson-Smyth, D-008). The observed statistic is itself a draw under the
+  null and must be counted; a permutation p of exactly zero asserts an
+  impossibility the test cannot support. The attainable floor is
+  1/(`N_PERM` + 1). The same convention applies to every permutation p in the
+  product, including the model-level test in M4.
 - Benjamini-Hochberg across all features, applied to the permutation p-values.
 
 This statistic is the ranking key for `GET /effects` and the **sole basis of
@@ -325,7 +330,7 @@ class EffectResult:
     delta_logloss: float         # OOF log-loss improvement over the prior baseline
     delta_ci_low: float          # bootstrap percentile CI, N_BOOT resamples
     delta_ci_high: float
-    permutation_p: float         # share of null deltas >= observed
+    permutation_p: float         # (1 + #{null deltas >= observed}) / (1 + N_PERM)
     permutation_p_adj: float     # Benjamini-Hochberg across all features
     null_mean: float             # of the permutation null of delta_logloss
     null_p95: float
@@ -464,10 +469,15 @@ predict_one(model, payload: dict) -> Prediction
   against the multinomial fit — statsmodels ships no Brant test (D-005).
 - Evaluation: stratified `N_SPLITS`-fold CV on train, then a single measurement
   on the held-out test set. The test set is touched once.
-- "Better than baseline" means beating the baseline log loss by more than
-  `BASELINE_SD_MULTIPLIER` CV standard deviations.
-- Model selection: choose the simplest model whose log loss is statistically
-  indistinguishable from the best one.
+- "Better than baseline" means the mean paired per-fold log-loss difference
+  (baseline minus model, on the shared CV folds) exceeds
+  `BASELINE_SD_MULTIPLIER` standard deviations (ddof=1) of those paired
+  differences. The folds are shared, so the paired estimate accounts for the
+  correlation between models; neither model's own CV standard deviation is
+  used (D-009).
+- Model selection: choose the simplest model that is statistically
+  indistinguishable from the best one, judged by the same paired per-fold
+  difference rule.
 - Calibration is mandatory: a one-vs-rest calibration curve per class plus the
   multiclass Brier score always go into the card.
 - `Prediction.confidence`: `"not_better_than_guessing"` whenever the selected
@@ -475,8 +485,14 @@ predict_one(model, payload: dict) -> Prediction
   `max_deviation_from_prior > CONFIDENCE_DEVIATION_THRESHOLD`, `"low"` below it.
 - Feature influence: permutation importance with confidence intervals only.
 - Model permutation test: `N_PERM_MODEL` target shuffles, log loss as the
-  statistic. Diagnostic only — see the precedence rule in M3: this test never
-  alters `dataset_verdict`.
+  statistic, p-value under the add-one convention defined in M3. It runs on
+  the gradient boosting model, not the selected one: the selection rule can
+  pick the prior dummy, whose permutation test is degenerate by construction
+  (the prior is invariant under target shuffles), and the diagnostic exists to
+  catch interaction structure, which only the boosting model can express
+  (D-007). The ModelCard labels which model the test describes. Diagnostic
+  only — see the precedence rule in M3: this test never alters
+  `dataset_verdict`.
 
 ### Edge cases
 | Situation | Behaviour |
@@ -532,7 +548,11 @@ labelled as not driving the ranking or the verdict. Clicking a feature reveals
 a histogram of the permutation null distribution of `delta_logloss` with a
 vertical line at the observed value, plus an explanation of the statistic and
 the verdict. This chart is the product's key visual — it conveys "signal versus
-noise" without words.
+noise" without words. The verdict legend defines all three levels, and
+`inconclusive` in particular: the evidence is insufficient to call the feature
+either way. That covers borderline positives as well as features whose
+improvement is negative but whose permutation p is not large enough to declare
+noise — the screen explains this state, it never reclassifies it by hand.
 
 **Screen 3 — Predict** (question 2). Form generated from `GET /schema`. Result
 shows three probabilities with the prior distribution in grey alongside. If

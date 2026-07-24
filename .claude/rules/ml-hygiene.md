@@ -29,7 +29,11 @@ These rules are not negotiable and are not relaxed to improve a result.
 ## Baseline
 - `DummyClassifier(strategy="prior")` is trained first in every experiment.
 - Every reported metric appears next to the baseline metric.
-- "Beats baseline" means exceeding it by more than 2 CV standard deviations.
+- "Beats baseline" means the mean paired per-fold difference exceeds
+  `BASELINE_SD_MULTIPLIER` standard deviations of those paired differences
+  (shared folds; never either model's own CV std).
+- Permutation p-values use the add-one convention (1 + k) / (1 + N); a
+  permutation p of exactly zero is a bug, not a result.
 
 ## Reproducibility
 - The only source of seeds is `src/rwsat/config.py`.

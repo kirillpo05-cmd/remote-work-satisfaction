@@ -45,8 +45,11 @@ def test_load_raw_missing_file_names_path_and_download_step(tmp_path: Path) -> N
 def test_load_raw_empty_file_raises_value_error(tmp_path: Path) -> None:
     empty = tmp_path / "empty.csv"
     empty.write_text("")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as exc:
         load_raw(empty)
+    # The path must be in the message. pandas' own EmptyDataError is already a
+    # ValueError but does not name the file; this pins OUR error contract.
+    assert str(empty) in str(exc.value)
 
 
 def test_load_raw_header_only_raises_value_error(tmp_path: Path) -> None:
