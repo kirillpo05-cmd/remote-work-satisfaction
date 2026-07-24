@@ -20,12 +20,35 @@ Status: accepted
 ---
 
 ## D-001: Product framing follows the signal check
-Context: <fill in with the actual Phase 0 verdict>
-Options: (a) a driver-explanation product; (b) a verification product that
-protects the user from a false conclusion.
-Decision: <fill in>
-Rationale: <fill in>
-Cost: <fill in>
+Context: The Phase 0 analysis was conducted before any product development was
+initiated. None of the 18 variables received a signal verdict, and this was true
+at two different seeds. None of the models outperformed the prior baseline under
+the paired CV rule. The model-level permutation test placed the gradient
+boosting fit inside its own null distribution (p = 0.55 and p = 0.41). The
+positive control with a U-shaped relationship was detected with delta = 0.054,
+indicating that the screen does work but simply found nothing in this dataset.
+
+Options: (a) a product which identifies the predictors of satisfaction as
+outlined in the brief; (b) a product which tests for the existence of such
+predictors and tells the user when there are none.
+
+Decision: (b).
+
+Rationale: Option (a) is only correct if the drivers are present, and the
+results indicate that they are not. A set of top variables derived from this
+data would be a set of noise, and the user would not be able to detect this. The
+product does not assert that these variables are unimportant. It asserts that no
+relationship is detectable using this method on this data. The positive control
+provides a scale for this claim: an effect of approximately delta = 0.05 would
+have been found, so any remaining effect is smaller, and an effect of that size
+is not useful for decision making.
+
+Cost: The product cannot do what such products are usually built to do. A user
+who needs a list of drivers will not receive one. The second question from the
+assignment is answered, but the answer remains close to the prior distribution
+and cannot be used for decisions regarding individual employees. This may be
+unexpected from the reader's perspective.
+
 Status: accepted
 
 ---
@@ -189,6 +212,28 @@ models; the paired estimate removes that shared variance and measures what the
 rule actually asks about — the stability of the gap.
 Cost: with N_SPLITS = 5 the paired std is estimated from five numbers and is
 itself noisy; the rule remains a heuristic gate, not a formal test.
+Status: accepted
+
+---
+
+## D-010: N_PERM raised from 500 to 2000
+Context: with N_PERM = 500 and the add-one convention (D-008), the smallest
+achievable raw permutation p is 1/501, so the smallest achievable BH-adjusted
+p across 18 features is 18/501 = 0.036 against ALPHA = 0.05 — the design could
+only ever declare `signal` at the exact resolution floor.
+Options: (a) keep 500 and accept that `signal` requires the observed statistic
+to beat every single permutation; (b) raise N_PERM to 2000, dropping the
+adjusted-p floor to 18/2001 = 0.009.
+Decision: (b).
+Rationale: this corrects the test's resolution so that a true signal has
+headroom below ALPHA after correction. It is recorded as a correction to the
+design, not as tuning toward a desired outcome: the change was made after the
+verdict was already `no_detectable_signal` and can only make `signal` easier
+to reach, i.e. it works against the observed result, not for it.
+Cost: the per-feature screening is four times slower (about 45 minutes of the
+full protocol's runtime is permutation refits), and the bootstrap and
+permutation counts are no longer the same number, which is mildly confusing to
+read in the config table.
 Status: accepted
 
 ---

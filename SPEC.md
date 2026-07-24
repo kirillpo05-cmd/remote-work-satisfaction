@@ -98,7 +98,7 @@ literal thresholds appear in function signatures or module code.
 | `N_SPLITS` | 5 | stratified CV folds (univariate OOF statistic and model CV) |
 | `N_UNIVARIATE_BINS` | 5 | quantile bins for numeric features in the univariate screen (M3) |
 | `N_BOOT` | 2000 | bootstrap resamples for confidence intervals |
-| `N_PERM` | 500 | per-feature permutation null |
+| `N_PERM` | 2000 | per-feature permutation null (raised from 500, D-010) |
 | `N_PERM_MODEL` | 200 | model-level permutation test |
 | `ALPHA` | 0.05 | significance level applied to BH-adjusted p-values |
 | `NOISE_PERMUTATION_P` | 0.2 | lower bound for the `noise` verdict |
