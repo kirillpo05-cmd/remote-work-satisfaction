@@ -300,7 +300,17 @@ draws dominate), and a committed artifact can drift from the code that
 produced it — a reviewer who changes stats.py or model.py and does not
 regenerate would see stale numbers. Mitigation: the artifacts are reproducible
 with `uv run python -m rwsat.cli verify-signal` / `train`, and the entrypoint
-regenerates on a clean volume with no artifacts present.
+regenerates when the baked files are absent.
+
+Follow-up (diagnosis): after baking the artifacts, a clean `docker compose up`
+still measured 62 minutes. Isolating it showed the image builds in ~5 minutes
+and the container is healthy in ~4 seconds run directly — the lost hour was the
+Phase-4 named volume mounted at /app/artifacts, whose init masked the baked
+files under cold Docker Desktop I/O and gated the health-dependent UI. The
+volume was there to persist runtime-generated artifacts, which no longer exist
+now that they ship in the image, so it was removed entirely. With no volume the
+container reads the baked artifacts directly; the earlier root-owned-bind-mount
+permission concern is moot because nothing writes to a mount in the normal path.
 Status: accepted
 
 ---

@@ -1,32 +1,25 @@
 # One-command startup: `docker compose up` serves the API on :8000 and the UI
-# on :8501. No environment variable is required. On a cold start the API
-# produces the missing artifacts first (signal report + model); measured cold
-# start on the development machine: 62 minutes from `up` to a working UI.
-# The UI waits on the API healthcheck and appears when the API is ready.
-# Artifacts persist in the named volume, so every later start takes seconds.
+# on :8501. No environment variable is required. The precomputed artifacts are
+# baked into the image (D-013), so the API becomes healthy in seconds — the
+# only one-time cost is the image build. No volume is mounted: the artifacts
+# are read straight from the image, and the entrypoint's regenerate-if-absent
+# fallback (SPEC M7) still applies if the baked files are ever removed.
 
 services:
   api:
     build: .
     ports:
       - "8000:8000"
-    volumes:
-      # Named volume, not a host bind mount: on a Linux host Docker would
-      # create ./artifacts root-owned before the non-root container starts,
-      # and first-start training would die on Permission denied. The named
-      # volume initialises from the image's rwsat-owned /app/artifacts and
-      # works identically on every platform.
-      - artifacts:/app/artifacts
     healthcheck:
       test:
         - CMD
         - python
         - -c
         - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"
-      interval: 15s
+      interval: 10s
       timeout: 5s
-      retries: 4
-      start_period: 120m  # measured cold start is ~62 min; margin for slower hosts
+      retries: 5
+      start_period: 40s  # artifacts are baked in; measured healthy in ~4s
 
   ui:
     build: .
@@ -45,6 +38,3 @@ services:
     depends_on:
       api:
         condition: service_healthy
-
-volumes:
-  artifacts:
