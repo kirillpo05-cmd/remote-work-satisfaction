@@ -196,7 +196,7 @@ first answer is documented concretely in
 | `app/main.py` | Streamlit UI — HTTP only (M6) |
 | `tests/` | 59 tests: leakage, synthetic known-answer, edge cases, endpoints, UI degradation |
 | `SPEC.md` | the module specification the code is built against |
-| `DECISIONS.md` | the decision log (D-000 … D-013), each with a cost |
+| `DECISIONS.md` | the decision log (D-000 … D-018), each with a cost |
 | `docs/ai-collaboration.md` | how the assistant was used and overridden |
 | `data/raw/LICENSE.md` | dataset source and license |
 
