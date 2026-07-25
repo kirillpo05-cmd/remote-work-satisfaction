@@ -6,10 +6,9 @@ description: Protocol for verifying whether predictive signal exists in the data
 # Skill: verify signal
 
 This protocol decides the product framing for the whole project. It runs before
-the model layer and before the UI. In Phase 0 it is executed by the explicit
-spike `scripts/spike_signal_check.py` (exempt from CLAUDE.md Rule 1; deleted or
-absorbed into spec'd modules before Phase 2 ends), later by
-`uv run python -m rwsat.cli verify-signal`.
+the model layer and before the UI. In Phase 0 it was first run as a throwaway
+spike (exempt from CLAUDE.md Rule 1), then absorbed into `src/rwsat/stats.py`;
+it is now run by `uv run python -m rwsat.cli verify-signal`.
 
 ## Steps
 

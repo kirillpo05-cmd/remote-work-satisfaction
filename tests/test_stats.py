@@ -1,9 +1,9 @@
 """Synthetic known-answer tests for M3 (SPEC M3). Written before the implementation.
 
-The central fixture asserts both directions of the non-monotone requirement
-(BUILD_PLAN Phase 1): a U-shaped association on a numeric feature yields
-`signal`, and a pure-noise feature with the same number of levels yields
-`noise`. Without the second assertion an over-eager screen would pass.
+The central fixture asserts both directions of the non-monotone requirement:
+a U-shaped association on a numeric feature yields `signal`, and a pure-noise
+feature with the same number of levels yields `noise`. Without the second
+assertion an over-eager screen would pass.
 """
 
 import numpy as np

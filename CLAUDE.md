@@ -32,9 +32,10 @@ data/raw/*.csv  ->  src/rwsat/data.py      schema, validation, split
 ## Rules
 1. No code without a matching section in `SPEC.md`. If the spec is thin, extend
    the spec first — never guess in code.
-   **Exception:** `scripts/spike_signal_check.py`, the Phase 0 spike, may exist
-   without a spec section. It must be deleted or absorbed into spec'd modules
-   before Phase 2 ends.
+   **Exception:** the Phase 0 signal-verification spike was allowed to exist
+   without a spec section, on the condition that it was deleted or absorbed into
+   spec'd modules before Phase 2 ended. It has since been absorbed into
+   `src/rwsat/stats.py` and removed.
 2. Train/test split happens **before** any preprocessing. All preprocessing lives
    inside `sklearn.Pipeline`. Fitting on test data is a critical bug.
 3. Tree-based `feature_importances_` are never used as evidence of influence.
@@ -65,16 +66,15 @@ docker compose up            # API on :8000, UI on :8501
 
 ## Documents
 - `SPEC.md` — module specifications: stories, data, API, screens, logic, edge cases
-- `BUILD_PLAN.md` — build phases and gates (internal, delete before submission)
 - `DECISIONS.md` — decision log
 - `docs/ai-collaboration.md` — record of how the AI assistant was used and overridden
 - `README.md` — written last, by hand, from the two logs above
 
 ## The Phase 0 gate
-The first task in this project is the `verify-signal` skill, executed as the
-explicit spike `scripts/spike_signal_check.py` (see the Rule 1 exception). Its
-outcome decides the product framing. Do not build the model, API or UI layers
-before it completes.
+The first task in this project is the `verify-signal` skill, which in Phase 0 was
+run as a throwaway spike before being absorbed into `src/rwsat/stats.py` (see the
+Rule 1 exception). Its outcome decides the product framing. Do not build the
+model, API or UI layers before it completes.
 - Signal found: emphasise driver explanation and prediction quality.
 - No signal found: emphasise proving its absence and protecting the user from a
   false conclusion. This is a valid result, not a failure, and the product is
