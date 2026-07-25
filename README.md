@@ -152,7 +152,7 @@ on cross-validation.
 
 Every non-trivial choice is recorded in [`DECISIONS.md`](DECISIONS.md) with its
 context, the alternatives, and — required for every entry — its **cost**.
-Fourteen decisions are logged (D-000 … D-013), including: specification before
+Fourteen decisions are logged (D-000 … D-018), including: specification before
 code, the product framing that follows the signal check, the single common
 statistic, treating the literal string `"None"` as a category rather than
 missing data, keeping onsite employees in the sample, the add-one permutation
