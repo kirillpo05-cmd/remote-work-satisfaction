@@ -315,12 +315,84 @@ Status: accepted
 
 ---
 
-<!-- Decisions that must be recorded as the build proceeds:
+---
 
-- Ordinal versus multinomial target treatment
-- Permutation importance instead of feature_importances_
-- Streamlit instead of a JS frontend
-- Splitting the API from the UI
-- Committing the dataset instead of requiring Kaggle credentials
-- The "simplest model that ties" selection rule
--->
+## D-014: Ordinal vs multinomial model
+Context: the target variable is ordered as dissatisfied < neutral < satisfied.
+Options: (a) a multinomial model, which ignores this order; (b) an ordinal
+logistic model, which preserves it.
+Decision: (b), as the main approach.
+Rationale: the ordinal model uses one coefficient per feature and preserves the
+order of the target categories. A multinomial model would require two separate
+sets of coefficients and would lose the information contained in the ordering of
+the responses.
+Cost: the proportional-odds assumption has to be checked (covered by D-005). If
+the assumption is violated, the multinomial model is kept as a fallback option.
+Status: accepted
+
+---
+
+## D-015: Permutation importance instead of `feature_importances_`
+Context: feature importance is needed for the model card.
+Options: (a) the built-in `feature_importances_` values from tree-based models;
+(b) permutation importance with a confidence interval.
+Decision: (b), permutation importance only.
+Rationale: tree-based feature importance can be non-zero even for pure noise and
+can be biased towards features with more levels. Permutation importance instead
+measures how much the model's performance changes when a feature is randomly
+shuffled, which gives a more direct measure of the feature's contribution to the
+model.
+Cost: higher computational time, because permutation importance requires
+additional model evaluations. It also still describes the model rather than
+proving that the feature has a real relationship with the data. This limitation
+was confirmed by Gate 3, where `Years_of_Experience` had high model importance
+but was not accepted as a reliable signal.
+Status: accepted
+
+---
+
+## D-016: Streamlit instead of a JavaScript frontend
+Context: the product requires a user interface.
+Options: (a) a full frontend using React or another JavaScript framework;
+(b) Streamlit.
+Decision: (b).
+Rationale: with limited time and a single developer, building a full frontend
+would use time that was more important for the methodology and documentation.
+Streamlit was sufficient to provide the required interface without adding
+unnecessary frontend development work.
+Cost: a simpler interface compared with a React-based application, with fewer
+options for detailed visual customisation.
+Status: accepted
+
+---
+
+## D-017: Separate API and UI
+Context: the prediction logic needed a clear place in the system.
+Options: (a) put everything into one Streamlit script; (b) separate the
+prediction service from the user interface using FastAPI and a thin Streamlit UI.
+Decision: (b), keep them separate.
+Rationale: the prediction logic is treated as a service that could be called by
+another interface or application in the future. The UI therefore only handles
+interaction and presentation, while the API is responsible for prediction. This
+separation is also verified by an import test that checks that the UI does not
+contain prediction logic.
+Cost: a slightly more complex setup, with two processes instead of one. The
+application is therefore less simple to start, but the separation makes the
+system structure clearer.
+Status: accepted
+
+---
+
+## D-018: Dataset committed to git
+Context: the project needs a simple way for a reviewer to access the data.
+Options: (a) require the reviewer to download the dataset from Kaggle; (b)
+include the CSV file directly in the repository.
+Decision: (b), commit the dataset to git.
+Rationale: the main reason is deployability. A reviewer should be able to clone
+the repository and run the product without creating a Kaggle account or
+completing an additional data download step. Including the CSV directly makes the
+project easier to reproduce and review.
+Cost: a binary CSV file is stored in the repository. For this project this was
+considered an acceptable trade-off because the dataset is required to run and
+evaluate the system.
+Status: accepted
